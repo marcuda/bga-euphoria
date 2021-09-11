@@ -10,39 +10,39 @@
 
 */
 
-$gameinfos = array( 
+$gameinfos = array(
 
-// Name of the game in English (will serve as the basis for translation) 
-'game_name' => "My Great Game",
+// Name of the game in English (will serve as the basis for translation)
+'game_name' => "Euphoria: Build a Better Dystopia",
 
 // Game designer (or game designers, separated by commas)
-'designer' => 'John Doe',       
+'designer' => 'Jamey Stegmaier, Alan Stone',
 
 // Game artist (or game artists, separated by commas)
-'artist' => 'Jane Doe',         
+'artist' => 'Jacqui David',
 
 // Year of FIRST publication of this game. Can be negative.
-'year' => 2000,                 
+'year' => 2013,
 
 // Game publisher (use empty string if there is no publisher)
-'publisher' => 'My Publishing Company',                     
+'publisher' => 'Stonemaier Games',
 
 // Url of game publisher website
-'publisher_website' => 'http://www.mypublishingcompany.com/',   
+'publisher_website' => 'http://www.stonemaiergames.com/',
 
 // Board Game Geek ID of the publisher
-'publisher_bgg_id' => 1234,
+'publisher_bgg_id' => 23202,
 
 // Board game geek ID of the game
 'bgg_id' => 133848,
 
 
 // Players configuration that can be played (ex: 2 to 4 players)
-'players' => array( 2,3,4 ),    
+'players' => array( 2,3,4,5,6 ),
 
 // Suggest players to play with this number of players. Must be null if there is no such advice, or if there is only one possible player configuration.
 // NB: the automatic lobby will try first the lowest number of players if this is not specified. So you _have to_ specify this parameter if the lowest player number is not compatible with the default options.
-'suggest_player_number' => null,
+'suggest_player_number' => array( 4,5 ),
 
 // Discourage players to play with these numbers of players. Must be null if there is no such advice.
 'not_recommend_player_number' => null,
@@ -50,16 +50,16 @@ $gameinfos = array(
 
 
 // Estimated game duration, in minutes (used only for the launch, afterward the real duration is computed)
-'estimated_duration' => 30,           
+'estimated_duration' => 60,
 
 // Time in second add to a player when "giveExtraTime" is called (speed profile = fast)
-'fast_additional_time' => 30,           
+'fast_additional_time' => 30,
 
 // Time in second add to a player when "giveExtraTime" is called (speed profile = medium)
-'medium_additional_time' => 40,           
+'medium_additional_time' => 40,
 
 // Time in second add to a player when "giveExtraTime" is called (speed profile = slow)
-'slow_additional_time' => 50,           
+'slow_additional_time' => 50,
 
 // If you are using a tie breaker in your game (using "player_score_aux"), you must describe here
 // the formula used to compute "player_score_aux". This description will be used as a tooltip to explain
@@ -67,9 +67,9 @@ $gameinfos = array(
 // Note: if you are NOT using any tie breaker, leave the empty string.
 //
 // Example: 'tie_breaker_description' => totranslate( "Number of remaining cards in hand" ),
-'tie_breaker_description' => "",
+'tie_breaker_description' => totranslate("Highest morale, lowest knowlege, most markets, most territories, low die roll"),
 
-// If in the game, all losers are equal (no score to rank them or explicit in the rules that losers are not ranked between them), set this to true 
+// If in the game, all losers are equal (no score to rank them or explicit in the rules that losers are not ranked between them), set this to true
 // The game end result will display "Winner" for the 1st player and "Loser" for all other players
 'losers_not_ranked' => false,
 
@@ -77,7 +77,7 @@ $gameinfos = array(
 'solo_mode_ranked' => false,
 
 // Game is "beta". A game MUST set is_beta=1 when published on BGA for the first time, and must remains like this until all bugs are fixed.
-'is_beta' => 1,                     
+'is_beta' => 1,
 
 // Is this game cooperative (all players wins together or loose together)
 'is_coop' => 0,
@@ -88,19 +88,19 @@ $gameinfos = array(
 'language_dependency' => false,
 
 // Complexity of the game, from 0 (extremely simple) to 5 (extremely complex)
-'complexity' => 3,    
+'complexity' => 3,
 
 // Luck of the game, from 0 (absolutely no luck in this game) to 5 (totally luck driven)
-'luck' => 3,    
+'luck' => 1,
 
 // Strategy of the game, from 0 (no strategy can be setup) to 5 (totally based on strategy)
-'strategy' => 3,    
+'strategy' => 3,
 
 // Diplomacy of the game, from 0 (no interaction in this game) to 5 (totally based on interaction and discussion between players)
-'diplomacy' => 3,    
+'diplomacy' => 0,
 
 // Colors attributed to players
-'player_colors' => array( "ff0000", "008000", "0000ff", "ffa500", "773300" ),
+'player_colors' => array( "ff0000", "008000", "0000ff", "0080ff", "000000", "ffffff" ),
 
 // Favorite colors support : if set to "true", support attribution of favorite colors based on player's preferences (see reattributeColorsBasedOnPreferences PHP method)
 // NB: this parameter is used only to flag games supporting this feature; you must use (or not use) reattributeColorsBasedOnPreferences PHP method to actually enable or disable the feature.
@@ -132,9 +132,7 @@ $gameinfos = array(
 // Each paragraph must be wrapped with totranslate() for translation and should not contain html (plain text without formatting).
 // A good length for this text is between 100 and 150 words (about 6 to 9 lines on a standard display)
 'presentation' => array(
-//    totranslate("This wonderful game is about geometric shapes!"),
-//    totranslate("It was awarded best triangle game of the year in 2005 and nominated for the Spiel des Jahres."),
-//    ...
+    totranslate("Euphoria is a worker-placement game in which dice are your workers. The number on each die represents a worker's knowledge—that is, his level of awareness that he's in a dystopia. Worker knowledge enables various bonuses and impacts player interaction. If the collective knowledge of all of your available workers gets too high, one of them might desert you. You also have two elite recruit cards at your disposal; one has pledged allegiance to you, but the other needs some convincing. You can reveal and use the reticent recruit by reaching certain milestones in the game... or by letting other players unwittingly reach those milestones for you."),
 ),
 
 // Games categories
@@ -144,7 +142,7 @@ $gameinfos = array(
 //  http://en.doc.boardgamearena.com/Game_meta-information:_gameinfos.inc.php
 //  IMPORTANT: this list should be ORDERED, with the most important tag first.
 //  IMPORTANT: it is mandatory that the FIRST tag is 1, 2, 3 and 4 (= game category)
-'tags' => array( 2 ),
+'tags' => array( 3, 203, 101, 12, 22 ),
 
 
 //////// BGA SANDBOX ONLY PARAMETERS (DO NOT MODIFY)
