@@ -53,51 +53,60 @@
 $machinestates = array(
 
     // The initial state. Please do not modify.
-    1 => array(
+    ST_GAME_SETUP => array(
         "name" => "gameSetup",
         "description" => "",
         "type" => "manager",
         "action" => "stGameSetup",
-        "transitions" => array( "" => 2 )
+        "transitions" => array("" => ST_DRAFT_RECRUITS)
     ),
     
-    // Note: ID=2 => your first state
+    ST_DRAFT_RECRUITS => array(
+        "name" => "draftRecruits",
+        "description" => clienttranslate('Other players must select their recruits'),
+        "descriptionmyturn" => clienttranslate('${you} must select your recruits'),
+        "type" => "multipleactiveplayer",
+        "action" => "stDraftRecruits",
+        "args" => "argsDraftRecruits",
+        "possibleactions" => array("actDraftRecruits"),
+        "transitions" => array("" => ST_NEXT)
+    ),
 
-    2 => array(
-    		"name" => "playerTurn",
-    		"description" => clienttranslate('${actplayer} must play a card or pass'),
-    		"descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-    		"type" => "activeplayer",
-    		"possibleactions" => array( "playCard", "pass" ),
-    		"transitions" => array( "playCard" => 2, "pass" => 2 )
+    ST_PLAY => array(
+        "name" => "playerTurn",
+        "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
+        "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
+        "type" => "activeplayer",
+        "action" => "stPlay",
+        "args" => "argsPlay",
+        "possibleactions" => array("actPlace", "actRetrieve", "actDilemma", "actGainRecruit",
+                                   "actTradeOffer", "actPass", "actPenalty", "actBenefit"),
+        "transitions" => array("" => ST_NEXT)
     ),
-    
-/*
-    Examples:
-    
-    2 => array(
+
+    ST_TRADE => array(
+        "name" => "trade",
+        "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
+        "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
+        "type" => "activeplayer",
+        "action" => "stTrade",
+        "args" => "argsTrade",
+        "possibleactions" => array("actTradeAccept", "actTradeConfirm", "actTradeCancel"),
+        "transitions" => array("" => ST_NEXT)
+    ),
+
+    ST_NEXT => array(
         "name" => "nextPlayer",
         "description" => '',
         "type" => "game",
         "action" => "stNextPlayer",
-        "updateGameProgression" => true,   
-        "transitions" => array( "endGame" => 99, "nextPlayer" => 10 )
+        "updateGameProgression" => true,
+        "transitions" => array("play" => ST_PLAY, "trade" => ST_TRADE, "end" => ST_END)
     ),
-    
-    10 => array(
-        "name" => "playerTurn",
-        "description" => clienttranslate('${actplayer} must play a card or pass'),
-        "descriptionmyturn" => clienttranslate('${you} must play a card or pass'),
-        "type" => "activeplayer",
-        "possibleactions" => array( "playCard", "pass" ),
-        "transitions" => array( "playCard" => 2, "pass" => 2 )
-    ), 
 
-*/    
-   
     // Final state.
     // Please do not modify (and do not overload action/args methods).
-    99 => array(
+    ST_END => array(
         "name" => "gameEnd",
         "description" => clienttranslate("End of game"),
         "type" => "manager",
