@@ -99,42 +99,51 @@ define("SUBTERRAN_TERRITORY", "loc_subt_territory");
 define("WORKER_TANK_ENERGY", "loc_worker_tank_e");
 define("WORKER_TANK_WATER", "loc_worker_tank_w");
 define("MARKET_E1", "loc_market_e1");
+define("MARKET_E1_0", "loc_market_e1_0");
 define("MARKET_E1_1", "loc_market_e1_1");
 define("MARKET_E1_2", "loc_market_e1_2");
 define("MARKET_E1_3", "loc_market_e1_3");
-define("MARKET_E1_4", "loc_market_e1_4");
 define("MARKET_E2", "loc_market_e2");
+define("MARKET_E2_0", "loc_market_e2_0");
 define("MARKET_E2_1", "loc_market_e2_1");
 define("MARKET_E2_2", "loc_market_e2_2");
 define("MARKET_E2_3", "loc_market_e2_3");
-define("MARKET_E2_4", "loc_market_e2_4");
 define("MARKET_W1", "loc_market_w1");
+define("MARKET_W1_0", "loc_market_w1_0");
 define("MARKET_W1_1", "loc_market_w1_1");
 define("MARKET_W1_2", "loc_market_w1_2");
 define("MARKET_W1_3", "loc_market_w1_3");
-define("MARKET_W1_4", "loc_market_w1_4");
 define("MARKET_W2", "loc_market_w2");
+define("MARKET_W2_0", "loc_market_w2_0");
 define("MARKET_W2_1", "loc_market_w2_1");
 define("MARKET_W2_2", "loc_market_w2_2");
 define("MARKET_W2_3", "loc_market_w2_3");
-define("MARKET_W2_4", "loc_market_w2_4");
 define("MARKET_S1", "loc_market_s1");
+define("MARKET_S1_0", "loc_market_s1_0");
 define("MARKET_S1_1", "loc_market_s1_1");
 define("MARKET_S1_2", "loc_market_s1_2");
 define("MARKET_S1_3", "loc_market_s1_3");
-define("MARKET_S1_4", "loc_market_s1_4");
 define("MARKET_S2", "loc_market_s2");
+define("MARKET_S2_0", "loc_market_s2_0");
 define("MARKET_S2_1", "loc_market_s2_1");
 define("MARKET_S2_2", "loc_market_s2_2");
 define("MARKET_S2_3", "loc_market_s2_3");
-define("MARKET_S2_4", "loc_market_s2_4");
 
+define("CON_SITES", array(
+    MARKET_E1_0, MARKET_E1_1, MARKET_E1_2, MARKET_E1_3,
+    MARKET_E2_0, MARKET_E2_1, MARKET_E2_2, MARKET_E2_3,
+    MARKET_W1_0, MARKET_W1_1, MARKET_W1_2, MARKET_W1_3,
+    MARKET_W2_0, MARKET_W2_1, MARKET_W2_2, MARKET_W2_3,
+    MARKET_S1_0, MARKET_S1_1, MARKET_S1_2, MARKET_S1_3,
+    MARKET_S2_0, MARKET_S2_1, MARKET_S2_2, MARKET_S2_3
+));
 define("MARKETS", array(
     MARKET_E1, MARKET_E2,
     MARKET_S1, MARKET_S2,
     MARKET_W1, MARKET_W2
 ));
 define("TUNNELS", array(EUPHORIAN_TUNNEL, WASTELANDER_TUNNEL, SUBTERRAN_TUNNEL));
+define("WELLS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER)); //TODO: wells is stupid. what are these called
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
@@ -154,7 +163,7 @@ define("LOCATIONS", array(
     ),
     SKY_LOUNGE => array(
         'cost' => array(RESOURCE => 1, BLISS => 1), //TODO: NOT 2x bliss
-        'benefit' => array(INFLUENCE => 1, RESOURCE => 2),
+        'benefit' => array(INFLUENCE => 1, RESOURCE => 2), //TODO: resource? commodity?
         'region' => ICARUS
     ),
     CLOUD_MINE => array(

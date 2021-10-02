@@ -31,8 +31,9 @@ CREATE TABLE IF NOT EXISTS `card` (
 -- Resources
 CREATE TABLE IF NOT EXISTS `resource` (
   `player_id` int unsigned NOT NULL,
-  `resource_type` varchar(16) unsigned NOT NULL,
+  `resource_type` varchar(16) NOT NULL,
   `resource_count` int unsigned NOT NULL,
+  `resource_loc` varchar(16),
   PRIMARY KEY (`player_id`,`resource_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ALTER TABLE resource ADD CONSTRAINT fk_player_id FOREIGN KEY (player_id) REFERENCES player(player_id);

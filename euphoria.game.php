@@ -238,6 +238,7 @@ class euphoria extends Table
         $current_player_id = self::getCurrentPlayerId();    // !! We must only return informations visible by this player !!
     
         // Get information about players
+        $sql = "SELECT player_id id, player_score score FROM player";
         $result['players'] = self::getCollectionFromDb($sql);
         foreach ($result['players'] as $player_id => $player) {
             $player['cards'] = count($this->cards->getPlayerHand($player_id));
@@ -303,6 +304,28 @@ class euphoria extends Table
     }
 
     /*
+     * Compare a player's active workers to their knowledge
+     * Discard the highest worker if necessary
+     */
+    function knowledgeCheck($player_id)
+    {
+        $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '" . ACTIVE . "'";
+        $sql .= " AND player_id = ${player_id}";
+        $w = (int)self::getUniqueValueFromDb($sql);
+        $k = $this->getResource($player_id, KNOWLEDGE);
+
+        if ($w + $k >= 16) {
+            // Lose 1 worker
+            $sql = "SELECT worker_id FROM worker WHERE player_id = ${player_id}";
+            $sql .= " ORDER BY worker_val DESC LIMIT 1";
+            $id = self::getUniqueValuefromDb($sql);
+
+            $sql = "UPDATE worker SET worker_loc = '" . INACTIVE . "' WHERE worker_id = ${id}";
+            //TODO notify
+        }
+    }
+
+    /*
      * Returns true if card_id exists and matches the given type, location, and player
      */
     function verifyCard($card_id, $type, $location, $player_id)
@@ -332,7 +355,40 @@ class euphoria extends Table
     {
         $sql = "SELECT resource_count FROM resource WHERE player_id = ${player_id} AND resource_name = ${type}";
         $val = self::getUniqueValueFromDB($sql);
-        return $val !== null && $val >= $nbr;
+        return $val !== null && (int)$val >= $nbr;
+    }
+
+    /*
+     * Get the number of resource a player has
+     */
+    function getResource($player_id, $resource)
+    {
+        $sql = "SELECT resource_count FROM resource WHERE resource_name = '${resource}'";
+        $sql .= " AND player_id = ${player_id}";
+        return (int)self::getUniqueValueFromDb($sql);
+    }
+
+    /*
+     * Increment the resource count for a player
+     */
+    function incResource($player_id, $resource, $nbr)
+    {
+        $sql = "UPDATE resource SET resource_count = resource_count + ${nbr} WHERE ";
+        $sql .= "resource_name = '${resource}' AND player_id = ${player_id}";
+        self::DbQuery($sql);
+    }
+
+    /*
+     * Increment the resource count for a player within set bounds (morale, knowledge)
+     */
+    function incResourceBounded($player_id, $resource, $nbr)
+    {
+        $val = $this->getResource($player_id, $resource);
+        $new_val = $val + $nbr;
+        $new_val = min(6, max(1, $new_val));
+        if ($new_val != $val) {
+            $this->incResource($player_id, $resource, $new_val - $val);
+        }
     }
 
     function activateRecruits($region)
@@ -387,8 +443,8 @@ class euphoria extends Table
 
         // Verify player paid any cost
         $paid = array();
-        if ($loc['cost'] !== null) {
-            foreach ($loc['cost'] as $type => $nbr) {
+        if ($loc_cost !== null) {
+            foreach ($loc_cost as $type => $nbr) {
                 if ($type == ARTIFACT) {
                     // Any artifacts
                     $cards = $payment[$type];
@@ -419,7 +475,7 @@ class euphoria extends Table
                     if (!$this->hasResource($player_id, $name, 1)) {
                         throw new BgaUserException(self::_("You do not have enough ${name}"));
                     }
-                    if ($name == BLISS && in_array(BLISS, $loc['cost'])) {
+                    if ($name == BLISS && in_array(BLISS, $loc_cost)) {
                         // Cannot use Bliss as second resource when Bliss is required (Icarus)
                         throw new BgaUserException(self::_("You cannot pay two Bliss for this action"));
                     }
@@ -479,14 +535,18 @@ class euphoria extends Table
 
         // 1. Bump
         // TODO: can you bump markets?
-        $sql = "SELECT worker_id FROM worker WHERE worker_loc = '${loc_name}'";
-        $bump = self::getUniqueValueFromDb($sql);
-        if ($bump !== null) {
+        //TODO: util func?
+        $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
+        $row = self::getObjectFromDB($sql);
+        if ($row !== null) {
+            $bump_player = $row['player'];
+            $bump_worker = $row['worker'];
             //TODO: penalties/benefits
             $val = die_roll();
-            $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${id}";
+            $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${bump_worker}";
             self::DbQuery($sql);
-            //TODO: knowledge check
+
+            $this->knowledgeCheck($bump_player);
             //TODO: notify
         }
 
@@ -498,20 +558,18 @@ class euphoria extends Table
                 }
             } else if (in_array($type, ARTIFACTS)) {
                 $this->cards->playCard($val);
-            } else if ($type == RESOURCE || $type == $COMMODITY) {
-               $sql = "UPDATE resource SET resource_count = resource_count - 1";
-               $sql .= " WHERE resource_name = '${val}' AND player_id = ${player_id}";
-               self::DbQuery($sql);
+            } else if ($type == RESOURCE || $type == COMMODITY) {
+                $this->incResource($player_id, $val, -1);
             } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
-               $sql = "UPDATE resource SET resource_count = resource_count - ${val}";
-               $sql .= " WHERE resource_name = '${type}' AND player_id = ${player_id}";
-               self::DbQuery($sql);
+                $this->incResource($player_id, $type, -$val);
             }
+            //TODO: notify
         }
 
         // 3. Move worker
         $sql = "UPDATE worker SET worker_location = ${loc_name} WHERE worker_id = ${worker_id}";
         self::DbQuery($sql);
+        //TODO: notify
 
         // 4. Mine
         if (in_array(TUNNELS, $loc_name)) {
@@ -529,19 +587,128 @@ class euphoria extends Table
         }
 
         // 5. Market
-        if (in_array(MARKETS, $loc_name)) {
-            // 5a. Build market
-            // check other locs
-            // check player number
-            // 5b. Bump all
-            // 5c. Score
+        if (in_array(CON_SITES, $loc_name)) {
+            // Determine how many construction sites are filled
+            $market = substr($loc_name, 0, strlen(MARKETS[0]));
+            $workers = array();
+            for ($i=0; $i<4; $i++) {
+                $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${market}_${i}'";
+                $row = self::getObjectFromDB($sql);
+                if ($row !== null) {
+                    $workers[$row['worker']] = $row['player'];
+                }
+            }
+
+            // Numbers sites required for player count
+            $num_player = self::getPlayersNumber();
+            if ($num_player < 4) {
+                $sites_needed = 2;
+            } else if ($num_player == 4) {
+                $sites_needed = 3;
+            } else {
+                $sites_needed = 4;
+            }
+
+            if (count($workers) == $sites_needed) {
+                // Market is complete, bump all players
+                foreach ($workers as $worker_id => $player_id) {
+                    //TODO: bump each player workers all at once? YES must only run Kcheck once
+                    //TODO: penalties/benefits
+                    $val = die_roll();
+                    $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${worker_id}";
+                    self::DbQuery($sql);
+                    $this->knowledgeCheck($player_id);
+                    //TODO: notify
+                }
+
+                // Flip market
+                self::incGameStateValue(GSV_MARKET_BUILT . $market);
+                //TODO: notify
+
+                // Place one star on market for each player
+                $players = array_unique($workers));
+                foreach ($players as $worker_id => $player_id) {
+                    $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
+                    $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${market}')";
+                    self::DbQuery($sql);
+
+                    $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
+                    self::DbQuery($sql);
+                    //TODO: notify
+                }
+
+            } else if (count($workers) > $sites_needed) {
+                throw new feException("Impossible worker placement: too many workers at market?!");
+            }
         }
+
         // 6. Benefit
-        // 6a. check bonus
-        // 6b. gain resources
-        // 6c. allegence
-        // 6d. user choice (incl star location)
-        // 6e. end game check
+        if (in_array($loc_name, WELLS)) {
+            // Well things depend on total value of workers present
+            $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '${loc_name}'";
+            $val = self::getUniqueValueFromDb($sql);
+            if ($val < 3) {
+                $idx = 0;
+            } else if ($val < 9) {
+                $idx = 1;
+            } else {
+                $idx = 2;
+            }
+
+            $benefit = $loc_benefit[$idx];
+            foreach ($benefit as $type => $nbr) {
+                if ($type == INFLUENCE) {
+                    $pos = self::incGameStateValue(GSV_TRACK_POS . $loc_region);
+                    //TODO: benefits and junk
+                    if ($pos == 8) {//TODO 8?
+                        $this->activateRecruits($loc_region);
+                    } else if ($pos == 11) {//TODO: 11?
+                        // score rect
+                        self::incGameStateValue(GSV_RECRUIT_SCORE . $loc_region);
+                        //TODO gain stars
+                        //TODO: how track this?
+                    }
+                } else if ($type == KNOWLEDGE || $type == MORALE) {
+                    $this->incResourceBounded($player_id, $type, $nbr);
+                } else {
+                    $this->incResource($player_id, $type, $nbr);
+                }
+            }
+        } else if (in_array($loc_name, TUNNELS)) {
+            if ($this->hasLocationBenefit($loc_name, $player_id)) {
+                foreach ($loc_benefit as $type => $nbr) {
+                    if ($type == ARTIFACT) {
+                        $this->cards->pickCard(DECK_ARTIFACT, $player_id);
+                    } else {
+                        $this->incResource($player_id, $type, $nbr);
+                    }
+                    //TODO: notify
+                }
+            } else {
+                // player must choose...how?
+                //TODO; separate action
+            }
+        } else if ($loc_benefit !== null) {
+            foreach ($loc_benefit as $type => $nbr) {
+                if ($type == ARTIFACT) {
+                    $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
+                } else if ($type == RESOURCE || $type == COMMODITY) {
+                    //TODO player must pick
+                } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                    $this->incResource($player_id, $type, $nbr);
+                } else if ($type == WORKER) {
+                    $val = $this->gainWorker($player_id);
+                    if ($val > 0) {
+                        $this->knowledgeCheck($player_id);
+                    }//TODO: notify if no gain?
+                } else if ($type == STAR) {
+                    //TODO player must choose loc (except icarus)
+                }
+            }
+            //TODO: notify
+        }
+        //TODO 6e. end game check
+        }
         // 7. doubles?
     }
 
