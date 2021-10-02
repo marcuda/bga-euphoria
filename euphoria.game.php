@@ -63,6 +63,7 @@ class euphoria extends Table
             GSV_RECRUIT_SCORE . SUBTERRA => 31,
             GSV_RECRUIT_SCORE . WASTELAND => 32,
             GSV_RECRUIT_SCORE . ICARUS => 33,
+            GSV_TRADE => 34,
             //      ...
             //    "my_first_game_variant" => 100,
             //    "my_second_game_variant" => 101,
@@ -122,6 +123,7 @@ class euphoria extends Table
         self::setGameStateInitialValue(GSV_MINER_POS . EUPHORIA, 0);
         self::setGameStateInitialValue(GSV_MINER_POS . SUBTERRA, 0);
         self::setGameStateInitialValue(GSV_MINER_POS . WASTELAND, 0);
+        self::setGameStateInitialValue(GSV_TRADE, 0);
         
         // Init game statistics
         // (note: statistics used in this file must be defined in your stats.inc.php file)
@@ -418,6 +420,45 @@ class euphoria extends Table
         //if not flip cards
         //set global
         //notify
+    }
+
+    /*
+     * Verifies the offered trade resources are legal
+     * Raises exceptions if not
+     */
+    function verifyTrade($player_id, $trade)
+    {
+        if (count($trade) == 0) {
+            throw new feException("Impossible trade: no goods offerred");
+        }
+        foreach ($trade as $type => $nbr) {
+            if (in_array($type, ARTIFACTS)) {
+                if (!$this->validateCard($nbr, $type, 'hand', $player_id)) {
+                    throw new feException("Impossible trade: invalid card '${nbr}' (${type})");
+                }
+            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                if (!$this->hasResource($player_id, $type, $nbr)) {
+                    throw new BgaUserException(self::_("You do not have enough ${type}"));
+                }
+            } else {
+                throw new feException("Impossible trade: invalid resource '${type}'");
+            }
+        }
+    }
+
+    /*
+     * Transfers resources from player_one to player_two
+     */
+    function doTrade($player_one, $player_two, $resources)
+    {
+        foreach ($resources as $type => $nbr) {
+            if (in_array($type, ARTIFACTS)) {
+                $this->cards->moveCard($nbr, 'hand', $player_two);
+            } else {
+                $this->incResource($player_one, $type, -$nbr);
+                $this->incResource($player_two, $type, $nbr);
+            }
+        }
     }
 
 
@@ -728,11 +769,10 @@ class euphoria extends Table
     function actRetrieve($worker_ids, $payment, $discard_id)
     {
         self::checkAction('actRetrieve'); 
-        
         $player_id = self::getActivePlayerId();
 
         // Verify worker(s)
-        if ($worker_ids === null || count($worker_ids) == 0) {
+        if (count($worker_ids) == 0) {
             throw new feException("Impossible retrieve: no workers given");
         }
         foreach ($worker_ids as $worker_id) {
@@ -796,7 +836,6 @@ class euphoria extends Table
     function actDilemma($dilemma_id, $side, $card_ids)
     {
         self::checkAction('actDilemma'); 
-        
         $player_id = self::getActivePlayerId();
 
         // Verify dilemma card
@@ -805,7 +844,7 @@ class euphoria extends Table
         }
 
         // Verify artifact(s) played
-        if ($cards_ids === null || count($cards_ids) == 0) {
+        if (count($cards_ids) == 0) {
             throw new feException("Impossible dilemma: no cards played");
         }
         if (count($cards_ids) > 2) {
@@ -866,44 +905,98 @@ class euphoria extends Table
         }
     }
 
-    function actTradeOffer($trade, $player_id)
+    function actTradeOffer($trade, $other_player)
     {
         self::checkAction('actTradeOffer'); 
-        
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active
-        // VERIFY: trade goods held (json)
-        // VERIFY: other player in game
-        // 1. Set other player active
-        // 2. Change state
+
+        // Verify players
+        $player_no = self:getPlayerNoById($other_player);
+        if ($other_player === null || $player_no === null || $player_id == $other_player) {
+            throw new feException("Impossible trade: invalide player '${other_player}'");
+        }
+
+        // Verify trade goods
+        $this->verifyTrade($player_id, $trade);
+
+        // Store trade info
+        $data = json_encode($trade);
+        $id = self::incGameStateValue(GSV_TRADE);
+        $sql = "INSERT INTO trade (trade_id, player_one, player_two, trade_offer)";
+        $sql .= " VALUES (${id}, ${player_id}, ${other_player}, '${data}')";
+        self::DbQuery($sql);
+
+        //TODO: notify
+        $this->gamestate->changeActivePlayer($other_player);
+        $this->gamestate->nextState("trade");
     }
 
     function actTradeAccept($trade)
     {
         self::checkAction('actTradeAccept'); 
-        
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active
-        // VERIFY: trade goods held (json)
-        // 1. Set other player active (from global)
+
+        // Verify trade goods
+        $this->verifyTrade($player_id, $trade);
+
+        // Verify active trade
+        $id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
+        if ($row === null || $row['player_two'] != $player_id) {
+            throw new feException("Impossible trade: no active trade '${id}' for player '${player_id}'");
+        }
+
+        // Store trade info
+        $data = json_encode($trade);
+        $sql = "UPDATE trade SET trade_return = '${data}' WHERE trade_id = ${id}";
+        self::DbQuery($sql);
+
+        //TODO: notify
+        $this->gamestate->changeActivePlayer($row['player_one']);
+        $this->gamestate->nextState("trade");
     }
+
     function actTradeConfirm()
     {
         self::checkAction('actTradeConfirm'); 
-        
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active
-        // 1. Swap goods (from global?)
-        // 2. Change state to play (keep current player)
+
+        // Verify active trade
+        $id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
+        if ($row === null || $row['player_one'] != $player_id) {
+            throw new feException("Impossible trade: no active trade '${id}' for player '${player_id}'");
+        }
+
+        // Perform trade
+        $player_one = $row['player_one'];
+        $player_two = $row['player_two'];
+        $data = json_decode($row['trade_offer']);
+        $this->doTrade($player_one, $player_two, $data);
+        $data = json_decode($row['trade_return']);
+        $this->doTrade($player_two, $player_one, $data);
+        //TODO: notify
+
+        // Current player's turn still
+        $this->gamestate->nextState();
     }
+
     function actTradeCancel()
     {
         self::checkAction('actTradeCancel'); 
-        
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active?
-        // 1. Set original player active
-        // 2. Change state to play
+
+        // Verify active trade
+        $id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
+        if ($row === null) {
+            throw new feException("Impossible trade: cannot cancel trade '${id}'")
+        }
+
+        //TODO: notify
+        // Return play to player offering trade
+        $this->gamestate->changeActivePlayer($row['player_one']);
+        $this->gamestate->nextState();
     }
 
     function actPass()
@@ -915,7 +1008,6 @@ class euphoria extends Table
     function actPenalty($payment)
     {
         self::checkAction('actPenalty'); 
-        
         $player_id = self::getActivePlayerId();
         // VERIFY: _not_ active player
         // TODO: how confirm payment needed?
@@ -926,7 +1018,6 @@ class euphoria extends Table
     function actBenefit($benefit)
     {
         self::checkAction('actBenefit'); 
-        
         $player_id = self::getActivePlayerId();
         // VERIFY: active player?
         // TODO: how confirm benefit?

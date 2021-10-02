@@ -27,6 +27,7 @@ define("GSV_MARKET_BUILT", "market_built_");
 define("GSV_TRACK_POS", "track_pos_");
 define("GSV_MINER_POS", "miner_pos_");
 define("GSV_TUNNEL_OPEN", "tunnel_end_");
+define("GSV_TRADE", "trade_counter");
 
 // Resources
 define("BLISS", "resource_bliss");

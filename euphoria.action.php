@@ -99,7 +99,7 @@ class action_euphoria extends APP_GameAction
     public function actTradeAccept()
     {
         self::setAjaxMode();
-        $trade = $this->getArg("trade", AT_json, true); // items offered in retrun
+        $trade = $this->getArg("trade", AT_json, true); // items offered in return
         $this->validateJSonAlphaNum($trade, 'trade');
         $this->game->actTradeAccept($trade);
         self::ajaxResponse();

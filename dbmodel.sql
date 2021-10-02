@@ -47,3 +47,15 @@ CREATE TABLE IF NOT EXISTS `worker` (
   PRIMARY KEY (`worker_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 ALTER TABLE worker ADD CONSTRAINT fk_player_id FOREIGN KEY (player_id) REFERENCES player(player_id);
+
+-- Trades
+CREATE TABLE IF NOT EXISTS `trade` (
+  `trade_id` int unsigned NOT NULL,
+  `player_one` int unsigned NOT NULL,
+  `player_two` int unsigned NOT NULL,
+  `trade_offer` JSON,
+  `trade_return` JSON,
+  PRIMARY KEY (`trade_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+ALTER TABLE trade ADD CONSTRAINT fk_player_one FOREIGN KEY (player_one) REFERENCES player(player_id);
+ALTER TABLE trade ADD CONSTRAINT fk_player_two FOREIGN KEY (player_two) REFERENCES player(player_id);
