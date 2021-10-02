@@ -905,14 +905,13 @@ class euphoria extends Table
         // 1. Set original player active
         // 2. Change state to play
     }
+
     function actPass()
     {
         self::checkAction('actPass'); 
-        
-        $player_id = self::getActivePlayerId();
-        // Do nothing
-        // I forget why... doubles? zombie?
+        $this->gamestate->nextState();
     }
+
     function actPenalty($payment)
     {
         self::checkAction('actPenalty'); 
@@ -923,6 +922,7 @@ class euphoria extends Table
         // VERIFY: payment available
         // 1. take resources
     }
+
     function actBenefit($benefit)
     {
         self::checkAction('actBenefit'); 
@@ -932,6 +932,7 @@ class euphoria extends Table
         // TODO: how confirm benefit?
         // 1. gain resources
     }
+
     /*
     
     Example:
@@ -986,23 +987,6 @@ class euphoria extends Table
     }    
     */
 
-    function stDraftRecruits()
-    {
-    }
-
-    function stPlay()
-    {
-    }
-
-    function stTrade()
-    {
-    }
-
-    function stNextPlayer()
-    {
-        //TODO: check end game
-    }
-
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state actions
@@ -1025,6 +1009,24 @@ class euphoria extends Table
         $this->gamestate->nextState( 'some_gamestate_transition' );
     }    
     */
+
+    function stDraftRecruits()
+    {
+    }
+
+    function stPlay()
+    {
+    }
+
+    function stTrade()
+    {
+    }
+
+    function stNextPlayer()
+    {
+        //TODO: check end game
+    }
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Zombie
