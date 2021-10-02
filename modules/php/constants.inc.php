@@ -62,9 +62,13 @@ define("ARTIFACTS", array(BALLON, BAT, BEAR, BOOK, BOX, GLASSES));
 // Cards
 define("RECRUIT", "type_recruit");
 define("MARKET", "type_market");
+define("DILEMMA", "type_dilemma");
 define("DECK_ARTIFACT", "deck_" . ARTIFACT);
 define("DECK_RECRUIT", "deck_" . RECRUIT);
 define("DECK_MARKET", "deck_" . MARKET);
+define("DECK_DILEMMA", "deck_" . DILEMMA);
+define("DILEMMA_LEFT", "dilemma_left");
+define("DILEMMA_RIGHT", "dilemma_right");
 
 // Board regions
 define("ICARUS", "region_icarus");

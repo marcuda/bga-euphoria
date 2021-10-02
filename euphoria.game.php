@@ -153,6 +153,13 @@ class euphoria extends Table
                 'nbr' => 1
             );
         }
+        foreach (DILEMMAS as $idx => $card) {
+            $cards[] array(
+                'type' = DILEMMA,
+                'type_arg' = $idx,
+                'nbr' => 1
+            );
+        }
          */
         $this->cards->createCards($cards);
 
@@ -166,6 +173,10 @@ class euphoria extends Table
         $cards = $this->cards->getCardsOfType(RECRUIT);
         $this->cards->moveCards(array_column($cards, 'id'), DECK_RECRUIT);
         $this->cards->shuffle(DECK_RECRUIT);
+
+        $cards = $this->cards->getCardsOfType(DILEMMA);
+        $this->cards->moveCards(array_column($cards, 'id'), DECK_DILEMMA);
+        $this->cards->shuffle(DECK_DILEMMA);
 
         // Place market tiles
         $cards = $this->cards->getCardsOfType(MARKET);
@@ -209,8 +220,9 @@ class euphoria extends Table
                 $first_player = $player_id;
             }
 
-            // Draw four recruit cards
+            // Draw four recruit cards and one dilemma
             $this->cards->pickCards(4, DECK_RECRUIT, $player_id);
+            $this->cards->pickCard(DECK_DILEMMA, $player_id);
         }
 
         // Activate first player (which is in general a good idea :) )
@@ -710,8 +722,6 @@ class euphoria extends Table
             }
             //TODO: notify
         }
-        //TODO 6e. end game check
-        }
         // 7. doubles? TODO
     }
 
@@ -783,19 +793,77 @@ class euphoria extends Table
         $this->knowledgeCheck($player_id);
     }
 
-    function actDilemma($id, $side, $card_ids)
+    function actDilemma($dilemma_id, $side, $card_ids)
     {
         self::checkAction('actDilemma'); 
         
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active
-        // VERIFY: dilemma card id
-        // VERIFY: card(s) in hand
-        // 1. Check card type
-        // 2. Discard
-        // 3. Flip card
-        // 4. Score OR Recruit
-        // 5. Check end game
+
+        // Verify dilemma card
+        if (!$this->verifyCard($dilemma_id, DILEMMA, 'hand', $player_id)) {
+            throw new feException("Impossible dilemma: invalid dilemma card '${dilemma_id}'");
+        }
+
+        // Verify artifact(s) played
+        if ($cards_ids === null || count($cards_ids) == 0) {
+            throw new feException("Impossible dilemma: no cards played");
+        }
+        if (count($cards_ids) > 2) {
+            throw new feException("Impossible dilemma: too many cards played");
+        }
+        foreach ($cards_ids as $id) {
+            if (!$this->verifyCard($id, ARTIFACT, 'hand', $player_id)) {
+                throw new feException("Impossible dilemma: invalid artifact card '${id}'");
+            }
+        }
+
+        // Verify action
+        if ($side != DILEMMA_LEFT && $side != DILEMMA_RIGHT) {
+            throw new feException("Impossible dilemma: invalide choice '${side}'");
+        }
+
+        $card = $this->cards->getCard($dilemma_id);
+        $cost = ARTIFACTS[$card['type_arg']];
+
+        if (count($card_ids) == 1) {
+            if (!$this->verifyCard($card_ids[0], $cost, 'hand', $player_id)) {
+                throw new BgaUserException(self::_("You must play a ${cost} this dilemma"));
+            }
+        }
+        //TODO: do the two have to be the same type?
+        /*
+        } else {
+            $card1 = $this->cards->getCard($card_ids[0]);
+            $card2 = $this->cards->getCard($card_ids[1]);
+            if ($card1['type'] != $card2['type']) {
+                throw new BgaUserException(self::_("You must play two of the same card"));
+            }
+        }
+        */
+        //TODO: stop players from being stupid? (play two including the one needed)
+
+        // Play cards
+        foreach ($card_ids as $id) {
+            $this->cards->playCard($id);
+        }
+        $this->cards->moveCard($dilemma_id, 'table', $player_id);
+
+        // Take action (score/recruit)
+        //TODO: verify left = recruit
+        if ($side == DILEMMA_LEFT) {
+            // Draw two recruits and keep one
+            $this->cards->pickCards(2, DECK_RECRUIT, $player_id);
+            //TODO: choose one
+        } else {
+            // Place star on card (score)
+            $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
+            $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${dilemma_id}')";
+            self::DbQuery($sql);
+
+            $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
+            self::DbQuery($sql);
+            //TODO: notify
+        }
     }
 
     function actTradeOffer($trade, $player_id)
@@ -917,6 +985,24 @@ class euphoria extends Table
         );
     }    
     */
+
+    function stDraftRecruits()
+    {
+    }
+
+    function stPlay()
+    {
+    }
+
+    function stTrade()
+    {
+    }
+
+    function stNextPlayer()
+    {
+        //TODO: check end game
+    }
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state actions
