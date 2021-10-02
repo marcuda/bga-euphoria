@@ -283,6 +283,18 @@ class euphoria extends Table
     }
 
     /*
+     * Roll die and set to active. Return roll value.
+     */
+    function activateWorker($worker_id)
+    {
+        $val = die_roll();
+        $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', ";
+        $sql .= " worker_val = ${val} WHERE worker_id = ${worker_id}";
+        self::DbQuery($sql);
+        return $val;
+    }
+
+    /*
      * Gain and roll a new active worker
      * Returns the value of the die roll, or zero if no worker can be gained
      */
@@ -296,11 +308,7 @@ class euphoria extends Table
             return 0;
         }
 
-        $val = die_roll();
-        $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${id}";
-        self::DbQuery($sql);
-
-        return $val;
+        return $this->activateWorker($id);
     }
 
     /*
@@ -542,10 +550,7 @@ class euphoria extends Table
             $bump_player = $row['player'];
             $bump_worker = $row['worker'];
             //TODO: penalties/benefits
-            $val = die_roll();
-            $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${bump_worker}";
-            self::DbQuery($sql);
-
+            $val = $this->activateWorker($bump_worker);
             $this->knowledgeCheck($bump_player);
             //TODO: notify
         }
@@ -614,9 +619,7 @@ class euphoria extends Table
                 foreach ($workers as $worker_id => $player_id) {
                     //TODO: bump each player workers all at once? YES must only run Kcheck once
                     //TODO: penalties/benefits
-                    $val = die_roll();
-                    $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', worker_val = ${val} WHERE worker_id = ${worker_id}";
-                    self::DbQuery($sql);
+                    $val = $this->activateWorker($worker_id);
                     $this->knowledgeCheck($player_id);
                     //TODO: notify
                 }
@@ -709,7 +712,7 @@ class euphoria extends Table
         }
         //TODO 6e. end game check
         }
-        // 7. doubles?
+        // 7. doubles? TODO
     }
 
     function actRetrieve($worker_ids, $payment, $discard_id)
@@ -717,18 +720,67 @@ class euphoria extends Table
         self::checkAction('actRetrieve'); 
         
         $player_id = self::getActivePlayerId();
-        // VERIFY: player active
-        // VERIFY: workers on board
-        // VERIFY: payment available or null
-        // VERIFY: card in hand or null
-        // 1. check payment
-        // 2. adjust morale
-        // 3. check hand size
-        // 3a. discard
-        // 4. Move worker(s)
-        // 5. Roll worker(s)
-        // 6. Knowledge check
-        // 7. Penalties
+
+        // Verify worker(s)
+        if ($worker_ids === null || count($worker_ids) == 0) {
+            throw new feException("Impossible retrieve: no workers given");
+        }
+        foreach ($worker_ids as $worker_id) {
+            $sql = "SELECT count(1) FROM worker WHERE worker_id = ${worker_id} AND ";
+            $sql .="worker_loc != '" . ACTIVE ."' AND worker_loc != '" . INACTIVE . "' AND ";
+            $sql .= "player_id = ${player_id}";
+            if ((int)self::getUniqueValueFromDb($sql) !== 1) {
+                throw new feException("Impossible retrieve: bad worker '${worker_id}'");
+            }
+        }
+
+        // Verify payment valid and available
+        if ($payment !== null) {
+            if ($payment != BLISS && $payment != FOOD) {
+                throw new feException("Impossible retrieve: invalid payment '${payment}'");
+            }
+
+            if ($this->getResource($player_id, $payment) == 0) {
+                throw new BgaUserException(self::_("You do not have any ${payment}"));
+            }
+        }
+
+        // Verify discard is valid and requried
+        if ($discard_id !== null) {
+            if ($payment !== null) {
+                throw new feException("Impossible retrieve: payment AND discard sent");
+            }
+
+            if (!$this->verifyCard($discard_id, ARTIFACT, 'hand', $player_id)) {
+                throw new feException("Impossible retrieve: invalid discard '${discard_id}'");
+            }
+        }
+
+        // Take payment and adjust morale
+        if ($payment !== null) {
+            $this->incResource($player_id, $payment, -1);
+            $this->incResourceBounded($player_id, MORALE, 2);
+        } else {
+            $this->incResourceBounded($player_id, MORALE, -1);
+
+            $cards = count($this->cards->getPlayerHand($player_id));
+            $morale = $this->getResource($player_id, MORALE);
+            if ($morale < $cards) {
+                if ($discard_id === null) {
+                    throw new BgaUserException(self::_("You must discard a card due to lost morale"));
+                }
+                $this->cards->playCard($discard_id);
+            }
+        }
+
+        // Roll and move worker(s)
+        foreach ($worker_ids as $worker_id) {
+            $val = $this->activateWorker($worker_id);
+            self::DbQuery($sql);
+            //TODO: penalty
+        }
+        //TODO: notify
+        $this->knowledgeCheck($player_id);
     }
 
     function actDilemma($id, $side, $card_ids)
