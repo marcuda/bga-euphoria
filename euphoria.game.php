@@ -461,6 +461,41 @@ class euphoria extends Table
         }
     }
 
+    function gainBenefits($player_id, $benefit, $region)
+    {
+        foreach ($benefit as $type => $nbr) {
+            if ($type == INFLUENCE) {
+                $pos = self::incGameStateValue(GSV_TRACK_POS . $region);
+                //TODO: benefits and junk
+                if ($pos == 8) {
+                    $this->activateRecruits($region);
+                } else if ($pos == 11) {
+                    // score rect
+                    self::incGameStateValue(GSV_RECRUIT_SCORE . $region);
+                    //TODO gain stars
+                    //TODO: how track this?
+                }
+            } else if ($type == KNOWLEDGE || $type == MORALE) {
+                $this->incResourceBounded($player_id, $type, $nbr);
+            } else if ($type == ARTIFACT) {
+                $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
+            } else if ($type == RESOURCE || $type == COMMODITY) {
+                //TODO player must pick
+            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                $this->incResource($player_id, $type, $nbr);
+            } else if ($type == WORKER) {
+                $val = $this->gainWorker($player_id);
+                if ($val > 0) {
+                    $this->knowledgeCheck($player_id);
+                }//TODO: notify if no gain?
+            } else if ($type == STAR) {
+                //TODO player must choose loc (except icarus)
+            } else {
+                throw new feException("Impossible benefit value '${type}'");
+            }
+        }
+    }
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Player actions
@@ -595,11 +630,13 @@ class euphoria extends Table
         }
 
         // 1. Bump
-        // TODO: can you bump markets?
-        //TODO: util func?
         $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
         $row = self::getObjectFromDB($sql);
         if ($row !== null) {
+            if (in_array(CON_SITES, $loc_name)) {
+                throw new BgaUserException(self::_("You cannot bump a worker from a construction site."));
+            }
+
             $bump_player = $row['player'];
             $bump_worker = $row['worker'];
             //TODO: penalties/benefits
@@ -699,70 +736,30 @@ class euphoria extends Table
         }
 
         // 6. Benefit
-        if (in_array($loc_name, WELLS)) {
-            // Well things depend on total value of workers present
+        if (in_array($loc_name, COMMODITIY_AREAS)) {
+            // Commodity benefit depends on total knowledge of workers at location
             $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '${loc_name}'";
             $val = self::getUniqueValueFromDb($sql);
-            if ($val < 3) {
+            if ($val < 5) {
                 $idx = 0;
             } else if ($val < 9) {
                 $idx = 1;
             } else {
                 $idx = 2;
             }
-
-            $benefit = $loc_benefit[$idx];
-            foreach ($benefit as $type => $nbr) {
-                if ($type == INFLUENCE) {
-                    $pos = self::incGameStateValue(GSV_TRACK_POS . $loc_region);
-                    //TODO: benefits and junk
-                    if ($pos == 8) {//TODO 8?
-                        $this->activateRecruits($loc_region);
-                    } else if ($pos == 11) {//TODO: 11?
-                        // score rect
-                        self::incGameStateValue(GSV_RECRUIT_SCORE . $loc_region);
-                        //TODO gain stars
-                        //TODO: how track this?
-                    }
-                } else if ($type == KNOWLEDGE || $type == MORALE) {
-                    $this->incResourceBounded($player_id, $type, $nbr);
-                } else {
-                    $this->incResource($player_id, $type, $nbr);
-                }
-            }
+            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_region);
         } else if (in_array($loc_name, TUNNELS)) {
             if ($this->hasLocationBenefit($loc_name, $player_id)) {
-                foreach ($loc_benefit as $type => $nbr) {
-                    if ($type == ARTIFACT) {
-                        $this->cards->pickCard(DECK_ARTIFACT, $player_id);
-                    } else {
-                        $this->incResource($player_id, $type, $nbr);
-                    }
-                    //TODO: notify
-                }
+                $this->gainBenefits($player_id, $loc_benefit, $loc_region);
             } else {
                 // player must choose...how?
                 //TODO; separate action
             }
         } else if ($loc_benefit !== null) {
-            foreach ($loc_benefit as $type => $nbr) {
-                if ($type == ARTIFACT) {
-                    $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
-                } else if ($type == RESOURCE || $type == COMMODITY) {
-                    //TODO player must pick
-                } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
-                    $this->incResource($player_id, $type, $nbr);
-                } else if ($type == WORKER) {
-                    $val = $this->gainWorker($player_id);
-                    if ($val > 0) {
-                        $this->knowledgeCheck($player_id);
-                    }//TODO: notify if no gain?
-                } else if ($type == STAR) {
-                    //TODO player must choose loc (except icarus)
-                }
-            }
-            //TODO: notify
+            $this->gainBenefits($player_id, $loc_benefit, $loc_region);
         }
+        //TODO: notify
+
         // 7. doubles? TODO
     }
 
@@ -869,16 +866,6 @@ class euphoria extends Table
                 throw new BgaUserException(self::_("You must play a ${cost} this dilemma"));
             }
         }
-        //TODO: do the two have to be the same type?
-        /*
-        } else {
-            $card1 = $this->cards->getCard($card_ids[0]);
-            $card2 = $this->cards->getCard($card_ids[1]);
-            if ($card1['type'] != $card2['type']) {
-                throw new BgaUserException(self::_("You must play two of the same card"));
-            }
-        }
-        */
         //TODO: stop players from being stupid? (play two including the one needed)
 
         // Play cards

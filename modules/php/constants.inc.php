@@ -148,7 +148,7 @@ define("MARKETS", array(
     MARKET_W1, MARKET_W2
 ));
 define("TUNNELS", array(EUPHORIAN_TUNNEL, WASTELANDER_TUNNEL, SUBTERRAN_TUNNEL));
-define("WELLS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER)); //TODO: wells is stupid. what are these called
+define("COMMODITIY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER)); //TODO: wells is stupid. what are these called
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
