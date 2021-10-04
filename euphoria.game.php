@@ -461,28 +461,29 @@ class euphoria extends Table
         }
     }
 
-    function gainBenefits($player_id, $benefit, $region)
+    /*
+     * Give player the provided benefits
+     */
+    function gainBenefits($player_id, $benefit, $location, $region)
     {
         foreach ($benefit as $type => $nbr) {
-            if ($type == INFLUENCE) {
+            if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                $this->incResource($player_id, $type, $nbr);
+            } else if ($type == ARTIFACT) {
+                $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
+            } else if ($type == INFLUENCE) {
                 $pos = self::incGameStateValue(GSV_TRACK_POS . $region);
-                //TODO: benefits and junk
                 if ($pos == 8) {
                     $this->activateRecruits($region);
                 } else if ($pos == 11) {
-                    // score rect
                     self::incGameStateValue(GSV_RECRUIT_SCORE . $region);
                     //TODO gain stars
                     //TODO: how track this?
                 }
             } else if ($type == KNOWLEDGE || $type == MORALE) {
                 $this->incResourceBounded($player_id, $type, $nbr);
-            } else if ($type == ARTIFACT) {
-                $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
             } else if ($type == RESOURCE || $type == COMMODITY) {
                 //TODO player must pick
-            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
-                $this->incResource($player_id, $type, $nbr);
             } else if ($type == WORKER) {
                 $val = $this->gainWorker($player_id);
                 if ($val > 0) {
@@ -490,10 +491,93 @@ class euphoria extends Table
                 }//TODO: notify if no gain?
             } else if ($type == STAR) {
                 //TODO player must choose loc (except icarus)
+                $territory = TERRITORIES[$region];
+                if ($region == ICARUS || (in_array($location, MARKETS) &&
+                        $this->gamestate->table_globals[OPT_MARKET_STARS] == 0)) {
+                    // Territory is only option
+                    if ($this->isTerritoryOpen($territory)) {
+                        $this->addStar($player_id, $territory);
+                    } else {
+                        //TODO: cannot place star, notify?
+                    }
+                } else {
+                    $open_markets = 0;
+                    foreach (MARKETS_BY_REGION[$region] as $market) {
+                        if (self::getGameStateValue(GSV_MARKET_BUILT . $market) == 1) {
+                            $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
+                            $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
+                            $nbr = self::getUniqueValueFromDb($sql);
+                            if ($nbr === null) {
+                                $open_markets += 1;
+                            }
+                        }
+                    }
+
+                    if ($open_markets == 0) {
+                        // Territory is only option
+                        if ($this->isTerritoryOpen($territory)) {
+                            $this->addStar($player_id, $territory);
+                        } else {
+                            //TODO: cannot place star, notify?
+                        }
+                    } else if ($open_markets == 1 && !$this->isTerritoryOpen($territory)) {
+                        // Market is only choice
+                        foreach (MARKETS_BY_REGION[$region] as $market) {
+                            if (self::getGameStateValue(GSV_MARKET_BUILT . $market) == 1) {
+                                $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
+                                $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
+                                $nbr = self::getUniqueValueFromDb($sql);
+                                if ($nbr === null) {
+                                    $this->addStar($player_id, $market);
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        //TODO: user must choose
+                    }
+                }
             } else {
                 throw new feException("Impossible benefit value '${type}'");
             }
         }
+    }
+
+    /*
+     * Returns true if territory has open space for stars, otherwise false
+     */
+    function isTerritoryOpen($territory)
+    {
+        $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${territory}'";
+        $nbr_filled = self::getUniqueValueFromDb($sql);
+        return $nbr_filled < self::getPlayersNumber();
+    }
+
+    function addStar($player_id, $loc)
+    {
+        // Get any stars already in place
+        $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
+        $sql .= " AND player_id = ${player_id} AND resource_loc = '${loc}'";
+        $nbr = self::getUniqueValueFromDb($sql);
+
+        if ($nbr !== null) {
+            // Already has some, add another
+            if (in_array($loc, MARKETS)) {
+                throw new feException("Impossible score: player '${player_id}' already has a star at '${loc}'");
+            }
+            $sql = "UPDATE resource SET resource_count = resource_count + 1 WHERE ";
+            $sql .= " resource_type = '" . STAR . "' AND player_id = ${player_id} ";
+            $sql .= " AND resource_loc = '${loc}'";
+        } else {
+            // Add new star
+            $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
+            $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${loc}')";
+        }
+        self::DbQuery($sql);
+
+        // Score star
+        $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
+        self::DbQuery($sql);
     }
 
 
@@ -721,12 +805,7 @@ class euphoria extends Table
                 // Place one star on market for each player
                 $players = array_unique($workers));
                 foreach ($players as $worker_id => $player_id) {
-                    $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
-                    $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${market}')";
-                    self::DbQuery($sql);
-
-                    $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
-                    self::DbQuery($sql);
+                    $this->addStar($player_id, $market);
                     //TODO: notify
                 }
 
@@ -747,16 +826,16 @@ class euphoria extends Table
             } else {
                 $idx = 2;
             }
-            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_region);
+            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_name, $loc_region);
         } else if (in_array($loc_name, TUNNELS)) {
             if ($this->hasLocationBenefit($loc_name, $player_id)) {
-                $this->gainBenefits($player_id, $loc_benefit, $loc_region);
+                $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
             } else {
                 // player must choose...how?
                 //TODO; separate action
             }
         } else if ($loc_benefit !== null) {
-            $this->gainBenefits($player_id, $loc_benefit, $loc_region);
+            $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
         }
         //TODO: notify
 
@@ -875,19 +954,13 @@ class euphoria extends Table
         $this->cards->moveCard($dilemma_id, 'table', $player_id);
 
         // Take action (score/recruit)
-        //TODO: verify left = recruit
         if ($side == DILEMMA_LEFT) {
             // Draw two recruits and keep one
             $this->cards->pickCards(2, DECK_RECRUIT, $player_id);
             //TODO: choose one
         } else {
             // Place star on card (score)
-            $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
-            $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${dilemma_id}')";
-            self::DbQuery($sql);
-
-            $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
-            self::DbQuery($sql);
+            $this->addStar($player_id, $dilemma_id);
             //TODO: notify
         }
     }

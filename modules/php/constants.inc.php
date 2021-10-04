@@ -29,6 +29,10 @@ define("GSV_MINER_POS", "miner_pos_");
 define("GSV_TUNNEL_OPEN", "tunnel_end_");
 define("GSV_TRADE", "trade_counter");
 
+// Game options
+define("OPT_MARKET_STARS", 100);
+define("OPT_DOUBLES_PAY", 101);
+
 // Resources
 define("BLISS", "resource_bliss");
 define("CLAY", "resource_clay");
@@ -134,6 +138,7 @@ define("MARKET_S2_1", "loc_market_s2_1");
 define("MARKET_S2_2", "loc_market_s2_2");
 define("MARKET_S2_3", "loc_market_s2_3");
 
+define("COMMODITIY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER));
 define("CON_SITES", array(
     MARKET_E1_0, MARKET_E1_1, MARKET_E1_2, MARKET_E1_3,
     MARKET_E2_0, MARKET_E2_1, MARKET_E2_2, MARKET_E2_3,
@@ -147,8 +152,18 @@ define("MARKETS", array(
     MARKET_S1, MARKET_S2,
     MARKET_W1, MARKET_W2
 ));
+define("MARKETS_BY_REGION", array(
+    EUPHORIA => array(MARKET_E1, MARKET_E2),
+    WASTELAND => array(MARKET_W1, MARKET_W2),
+    SUBTERRA => array(MARKET_S1, MARKET_S2)
+));
+define("TERRITORIES", array(
+    ICARUS => ICARITE_TERRITORY,
+    EUPHORIA => EUPHORIAN_TERRITORY,
+    WASTELAND => WASTELANDER_TERRITORY,
+    SUBTERRA => SUBTERRAN_TERRITORY
+));
 define("TUNNELS", array(EUPHORIAN_TUNNEL, WASTELANDER_TUNNEL, SUBTERRAN_TUNNEL));
-define("COMMODITIY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER)); //TODO: wells is stupid. what are these called
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
