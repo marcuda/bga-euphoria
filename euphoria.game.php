@@ -43,25 +43,25 @@ class euphoria extends Table
             // Allegiance track progress markers
             GSV_TRACK_POS . EUPHORIA => 16,
             GSV_TRACK_POS . SUBTERRA => 17,
-            GSV_TRACK_POS . WASTELAND => 18,
+            GSV_TRACK_POS . WASTELANDS => 18,
             GSV_TRACK_POS . ICARUS => 19,
             // Miner tunnel positions
-            GSV_MINER_POS . EUPHORIA => 20, 
+            GSV_MINER_POS . EUPHORIA => 20,
             GSV_MINER_POS . SUBTERRA => 21,
-            GSV_MINER_POS . WASTELAND => 22,
+            GSV_MINER_POS . WASTELANDS => 22,
             // Tunnel end spaces
-            GSV_TUNNEL_END . EUPHORIA => 23, 
-            GSV_TUNNEL_END . SUBTERRA => 24,
-            GSV_TUNNEL_END . WASTELAND => 25,
+            GSV_TUNNEL_OPEN . EUPHORIA => 23,
+            GSV_TUNNEL_OPEN . SUBTERRA => 24,
+            GSV_TUNNEL_OPEN . WASTELANDS => 25,
             // Recruits activated
             GSV_RECRUIT_ACTIVE . EUPHORIA => 26,
             GSV_RECRUIT_ACTIVE . SUBTERRA => 27,
-            GSV_RECRUIT_ACTIVE . WASTELAND => 28,
+            GSV_RECRUIT_ACTIVE . WASTELANDS => 28,
             GSV_RECRUIT_ACTIVE . ICARUS => 29,
             // Recruits scored
             GSV_RECRUIT_SCORE . EUPHORIA => 30,
             GSV_RECRUIT_SCORE . SUBTERRA => 31,
-            GSV_RECRUIT_SCORE . WASTELAND => 32,
+            GSV_RECRUIT_SCORE . WASTELANDS => 32,
             GSV_RECRUIT_SCORE . ICARUS => 33,
             GSV_TRADE => 34,
             //      ...
@@ -119,10 +119,11 @@ class euphoria extends Table
             self::setGameStateInitialValue(GSV_TRACK_POS . $region, 0);
             self::setGameStateInitialValue(GSV_RECRUIT_ACTIVE . $region, 0);
             self::setGameStateInitialValue(GSV_RECRUIT_SCORE . $region, 0);
+            if ($region != ICARUS) {
+                self::setGameStateInitialValue(GSV_MINER_POS . $region, 0);
+                self::setGameStateInitialValue(GSV_TUNNEL_OPEN . $region, 0);
+            }
         }
-        self::setGameStateInitialValue(GSV_MINER_POS . EUPHORIA, 0);
-        self::setGameStateInitialValue(GSV_MINER_POS . SUBTERRA, 0);
-        self::setGameStateInitialValue(GSV_MINER_POS . WASTELAND, 0);
         self::setGameStateInitialValue(GSV_TRADE, 0);
         
         // Init game statistics
@@ -291,13 +292,16 @@ class euphoria extends Table
         In this space, you can put any utility methods useful for your game logic
     */
 
+    /*
+     * Helper function to get value of a random die roll (1-6)
+     */
     function die_roll()
     {
         return bga_rand(1, 6);
     }
 
     /*
-     * Roll die and set to active. Return roll value.
+     * Roll die and set to active. Return worker value.
      */
     function activateWorker($worker_id)
     {
@@ -495,7 +499,7 @@ class euphoria extends Table
                 if ($region == ICARUS || (in_array($location, MARKETS) &&
                         $this->gamestate->table_globals[OPT_MARKET_STARS] == 0)) {
                     // Territory is only option
-                    if ($this->isTerritoryOpen($territory)) {
+                    if ($this->isSpaceOpen($territory)) {
                         $this->addStar($player_id, $territory);
                     } else {
                         //TODO: cannot place star, notify?
@@ -503,7 +507,7 @@ class euphoria extends Table
                 } else {
                     $open_markets = 0;
                     foreach (MARKETS_BY_REGION[$region] as $market) {
-                        if (self::getGameStateValue(GSV_MARKET_BUILT . $market) == 1) {
+                        if ($this->isSpaceOpen($market)) {
                             $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
                             $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
                             $nbr = self::getUniqueValueFromDb($sql);
@@ -515,15 +519,15 @@ class euphoria extends Table
 
                     if ($open_markets == 0) {
                         // Territory is only option
-                        if ($this->isTerritoryOpen($territory)) {
+                        if ($this->isSpaceOpen($territory)) {
                             $this->addStar($player_id, $territory);
                         } else {
                             //TODO: cannot place star, notify?
                         }
-                    } else if ($open_markets == 1 && !$this->isTerritoryOpen($territory)) {
+                    } else if ($open_markets == 1 && !$this->isSpaceOpen($territory)) {
                         // Market is only choice
                         foreach (MARKETS_BY_REGION[$region] as $market) {
-                            if (self::getGameStateValue(GSV_MARKET_BUILT . $market) == 1) {
+                            if ($this->isSpaceOpen($market)) {
                                 $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
                                 $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
                                 $nbr = self::getUniqueValueFromDb($sql);
@@ -544,15 +548,33 @@ class euphoria extends Table
     }
 
     /*
-     * Returns true if territory has open space for stars, otherwise false
+     * Returns true if the board space is open and availble
+     * That is, market is built, tunnel end is opened, or star territory is not full
      */
-    function isTerritoryOpen($territory)
+    function isSpaceOpen($location, $region=null)
     {
-        $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${territory}'";
-        $nbr_filled = self::getUniqueValueFromDb($sql);
-        return $nbr_filled < self::getPlayersNumber();
+        if (in_array($location, TERRITORIES)) {
+            // Territory - check stars again playes
+            $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${region}'";
+            $nbr_filled = self::getUniqueValueFromDb($sql);
+            $open = $nbr_filled < self::getPlayersNumber();
+        } else if (in_array($location, MARKETS)) {
+            // Market built?
+            $open = self::getGameStateValue(GSV_MARKET_BUILT . $location) != 0;
+        } else if (in_array($location, TUNNELS_ENDS)) {
+            // Tunnel opened?
+            $open = self::getGameStateValue(GSV_TUNNEL_OPEN . $region) != 0;
+        } else {
+            // Anything else is always open
+            $open = true;
+        }
+
+        return $open;
     }
 
+    /*
+     * Add a star for the player at the given location and score one point
+     */
     function addStar($player_id, $loc)
     {
         // Get any stars already in place
@@ -562,7 +584,8 @@ class euphoria extends Table
 
         if ($nbr !== null) {
             // Already has some, add another
-            if (in_array($loc, MARKETS)) {
+            if (in_array($loc, MARKETS) || is_numeric($loc)) {
+                // Only one star per market or card (recruit/dilemma)
                 throw new feException("Impossible score: player '${player_id}' already has a star at '${loc}'");
             }
             $sql = "UPDATE resource SET resource_count = resource_count + 1 WHERE ";
@@ -613,13 +636,19 @@ class euphoria extends Table
         if (!in_array($loc_name, LOCATIONS)) {
             throw new feException("Impossible worker placement: invalid location '${loc_name}'");
         }
-        //TODO: verify penalties
-        //TODO: verify open (market, mine)
 
         $location = LOCATIONS[$loc_name];
         $loc_cost = $location['cost'];
         $loc_benefit = $location['benefit'];
         $loc_region = $location['region'];
+
+        // Verify location open (market, mine, etc.)
+        if (!$this->isSpaceOpen($loc_name, $loc_region)) {
+            throw new BgaUserException(self::_("The ${loc_name} is not available to use"));
+            //TODO: translate loc_name to proper name
+        }
+
+        //TODO: verify penalties
 
         // Verify player paid any cost
         $paid = array();
@@ -835,6 +864,7 @@ class euphoria extends Table
             } else {
                 // player must choose...how?
                 //TODO; separate action
+                //OR force it to come in with move, yes? Easy, but many Recruits will require choice...
             }
         } else if ($loc_benefit !== null) {
             $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);

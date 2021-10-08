@@ -78,7 +78,7 @@ define("DILEMMA_RIGHT", "dilemma_right");
 // Board regions
 define("ICARUS", "region_icarus");
 define("EUPHORIA", "region_euphoria");
-define("WASTELAND", "region_wasteland");
+define("WASTELANDS", "region_wastelands");
 define("SUBTERRA", "region_subterra");
 
 // Board locations
@@ -95,16 +95,16 @@ define("ARK", "loc_ark");
 define("FARM", "loc_farm");
 define("FREE_PRESS", "loc_free_press");
 define("AQUIFER", "loc_aquifer");
-define("EUPHORIAN_TUNNEL", "loc_euph_tunnel");
-define("EUPHORIAN_TUNNEL_END", "loc_euph_tunnel_end");
-define("WASTELANDER_TUNNEL", "loc_waste_tunnel");
-define("WASTELANDER_TUNNEL_END", "loc_waste_tunnel_end");
-define("SUBTERRAN_TUNNEL", "loc_subt_tunnel");
-define("SUBTERRAN_TUNNEL_END", "loc_subt_tunnel_end");
-define("ICARITE_TERRITORY", "loc_icariate_territory");
-define("EUPHORIAN_TERRITORY", "loc_euph_territory");
-define("WASTELANDER_TERRITORY", "loc_waste_territory");
-define("SUBTERRAN_TERRITORY", "loc_subt_territory");
+define("EUPHORIA_TUNNEL", "loc_euph_tunnel");
+define("EUPHORIA_TUNNEL_END", "loc_euph_tunnel_end");
+define("WASTELANDS_TUNNEL", "loc_waste_tunnel");
+define("WASTELANDS_TUNNEL_END", "loc_waste_tunnel_end");
+define("SUBTERRA_TUNNEL", "loc_subt_tunnel");
+define("SUBTERRA_TUNNEL_END", "loc_subt_tunnel_end");
+define("ICARUS_TERRITORY", "loc_icariate_territory");
+define("EUPHORIA_TERRITORY", "loc_euph_territory");
+define("WASTELANDS_TERRITORY", "loc_waste_territory");
+define("SUBTERRA_TERRITORY", "loc_subt_territory");
 define("WORKER_TANK_ENERGY", "loc_worker_tank_e");
 define("WORKER_TANK_WATER", "loc_worker_tank_w");
 define("MARKET_E1", "loc_market_e1");
@@ -154,16 +154,17 @@ define("MARKETS", array(
 ));
 define("MARKETS_BY_REGION", array(
     EUPHORIA => array(MARKET_E1, MARKET_E2),
-    WASTELAND => array(MARKET_W1, MARKET_W2),
+    WASTELANDS => array(MARKET_W1, MARKET_W2),
     SUBTERRA => array(MARKET_S1, MARKET_S2)
 ));
 define("TERRITORIES", array(
-    ICARUS => ICARITE_TERRITORY,
-    EUPHORIA => EUPHORIAN_TERRITORY,
-    WASTELAND => WASTELANDER_TERRITORY,
-    SUBTERRA => SUBTERRAN_TERRITORY
+    ICARUS => ICARUS_TERRITORY,
+    EUPHORIA => EUPHORIA_TERRITORY,
+    WASTELANDS => WASTELANDS_TERRITORY,
+    SUBTERRA => SUBTERRA_TERRITORY
 ));
-define("TUNNELS", array(EUPHORIAN_TUNNEL, WASTELANDER_TUNNEL, SUBTERRAN_TUNNEL));
+define("TUNNELS", array(EUPHORIA_TUNNEL, WASTELANDS_TUNNEL, SUBTERRA_TUNNEL));
+define("TUNNEL_ENDS", array(EUPHORIA_TUNNEL_END, WASTELANDS_TUNNEL_END, SUBTERRA_TUNNEL_END));
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
@@ -212,7 +213,7 @@ define("LOCATIONS", array(
     ARK => array(
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     FARM => array(
         'cost' => NULL,
@@ -221,7 +222,7 @@ define("LOCATIONS", array(
             array(FOOD => 1, KNOWLEDGE => -1),
             array(FOOD => 2, KNOWLEDGE => 1)
         ),
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     FREE_PRESS => array(
         'cost' => array(ARTIFACT => 3),
@@ -237,52 +238,52 @@ define("LOCATIONS", array(
         ),
         'region' => SUBTERRA
     ),
-    EUPHORIAN_TUNNEL => array(
+    EUPHORIA_TUNNEL => array(
         'cost' => array(ENERGY => 1),
         'benefit' => array(GOLD => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => EUPHORIA
     ),
-    EUPHORIAN_TUNNEL_END => array(
+    EUPHORIA_TUNNEL_END => array(
         'cost' => NULL,
         'benefit' => array(WATER => 3),
         'region' => EUPHORIA
     ),
-    WASTELANDER_TUNNEL => array(
+    WASTELANDS_TUNNEL => array(
         'cost' => array(WATER => 1),
         'benefit' => array(CLAY => 1, ARTIFACT => 1), //TODO: choose 1
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
-    WASTELANDER_TUNNEL_END => array(
+    WASTELANDS_TUNNEL_END => array(
         'cost' => NULL
         'benefit' => array(ENERGY => 3),
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
-    SUBTERRAN_TUNNEL => array(
+    SUBTERRA_TUNNEL => array(
         'cost' => array(WATER => 1),
         'benefit' => array(STONE => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => SUBTERRA
     ),
-    SUBTERRAN_TUNNEL_END => array(
+    SUBTERRA_TUNNEL_END => array(
         'cost' => NULL,
         'benefit' => array(FOOD => 3),
         'region' => SUBTERRA
     ),
-    ICARITE_TERRITORY => array(
+    ICARUS_TERRITORY => array(
         'cost' => NULL,
         'benefit' => NULL,
         'region' => ICARUS
     ),
-    EUPHORIAN_TERRITORY => array(
+    EUPHORIA_TERRITORY => array(
         'cost' => NULL,
         'benefit' => NULL,
         'region' => EUPHRORIA
     ),
-    WASTELANDER_TERRITORY => array(
+    WASTELANDS_TERRITORY => array(
         'cost' => NULL,
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
-    SUBTERRAN_TERRITORY => array(
+    SUBTERRA_TERRITORY => array(
         'cost' => NULL,
         'benefit' => NULL,
         'region' => SUBTERRA
@@ -350,52 +351,52 @@ define("LOCATIONS", array(
     MARKET_W1 => array(
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W1_1 => array(
         'cost' => array(STONE => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W1_2 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W1_3 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W1_4 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W2 => array(
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W2_1 => array(
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W2_2 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W2_3 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_W2_4 => array(
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
-        'region' => WASTELAND
+        'region' => WASTELANDS
     ),
     MARKET_S1 => array(
         'cost' => NULL, // Depends on market
