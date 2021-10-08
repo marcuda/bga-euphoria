@@ -610,7 +610,7 @@ class euphoria extends Table
         }
 
         // Verify location
-        if (!in_array($loc_name), LOCATIONS) {
+        if (!in_array($loc_name, LOCATIONS)) {
             throw new feException("Impossible worker placement: invalid location '${loc_name}'");
         }
         //TODO: verify penalties
@@ -717,16 +717,18 @@ class euphoria extends Table
         $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
         $row = self::getObjectFromDB($sql);
         if ($row !== null) {
-            if (in_array(CON_SITES, $loc_name)) {
+            if (in_array($loc_name, CON_SITES)) {
                 throw new BgaUserException(self::_("You cannot bump a worker from a construction site."));
             }
 
-            $bump_player = $row['player'];
-            $bump_worker = $row['worker'];
-            //TODO: penalties/benefits
-            $val = $this->activateWorker($bump_worker);
-            $this->knowledgeCheck($bump_player);
-            //TODO: notify
+            if (!in_array($loc_name, COMMODITY_AREAS)) { // no bump in commodities
+                $bump_player = $row['player'];
+                $bump_worker = $row['worker'];
+                //TODO: penalties/benefits
+                $val = $this->activateWorker($bump_worker);
+                $this->knowledgeCheck($bump_player);
+                //TODO: notify
+            }
         }
 
         // 2. Take payment (json)
@@ -766,7 +768,7 @@ class euphoria extends Table
         }
 
         // 5. Market
-        if (in_array(CON_SITES, $loc_name)) {
+        if (in_array($loc_name, CON_SITES)) {
             // Determine how many construction sites are filled
             $market = substr($loc_name, 0, strlen(MARKETS[0]));
             $workers = array();

@@ -138,7 +138,7 @@ define("MARKET_S2_1", "loc_market_s2_1");
 define("MARKET_S2_2", "loc_market_s2_2");
 define("MARKET_S2_3", "loc_market_s2_3");
 
-define("COMMODITIY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER));
+define("COMMODITY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER));
 define("CON_SITES", array(
     MARKET_E1_0, MARKET_E1_1, MARKET_E1_2, MARKET_E1_3,
     MARKET_E2_0, MARKET_E2_1, MARKET_E2_2, MARKET_E2_3,
