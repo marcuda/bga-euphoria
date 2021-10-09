@@ -224,15 +224,15 @@ class euphoria extends Table
             }
 
             // Draw four recruit cards and one dilemma
-            $this->cards->pickCards(4, DECK_RECRUIT, $player_id);
-            $this->cards->pickCard(DECK_DILEMMA, $player_id);
+            $this->cards->pickCards(4, DECK_RECRUIT, $player_id); // move to active/hidden after draft
+            $this->cards->pickCardForLocation(DECK_DILEMMA, 'hidden', $player_id); // not in hand per se
         }
 
-        // Activate first player (which is in general a good idea :) )
-        //$this->activeNextPlayer(); //TODO: do i need this? or below enough?
-        $this->gamestate->changeActivePlayer($first_player);
-        //TODO: wait, no, first stage is recruit which is multiactive! how do i do that?
-        //but then it should come back to this player...
+        // Start with all players drafting recruits
+        //TODO: do options happen before/after? (e.g. markets)
+        $this->gamestate->setAllPlayersMultiactive();
+        //TODO: set first player?
+        //$this->gamestate->changeActivePlayer($first_player);
 
         /************ End of the game initialization *****/
     }
@@ -415,6 +415,11 @@ class euphoria extends Table
         if ($new_val != $val) {
             $this->incResource($player_id, $resource, $new_val - $val);
         }
+    }
+
+    function getRecruitInfo($card_id)
+    {
+        //TODO: from cardId get card then match to specific recruit object
     }
 
     function activateRecruits($region)
@@ -709,13 +714,46 @@ class euphoria extends Table
     function actDraftRecruits($active_id, $hidden_id, $is_draft)
     {
         self::checkAction('actDraftRecruits'); 
-        // VERIFY: player active (poss multiple)
-        // VERIFY: cards in hand
-        // 1. Give recruits to plaer
-        // 2. Set active one active (may be null)
-        // 3. Check if hidden is revealed, activate
-        // 4. Check if hidden is worth a point (end game check)
-        // 5. Discard others
+        $player_id = self::getCurrentPlayerId()
+
+        // Verify player active
+        if (!$this->gamestate->isPlayerActive($player_id)) {
+            throw new BgaUserException(self::_("It is not your turn!"));
+        }
+
+        // Verify cards
+        if (!$this->verifyCard($active_id, RECRUIT, 'hand', $player_id) ||
+            !$this->verifyCard($hidden_id, RECRUIT, 'hand', $player_id)) {
+            throw new feException("Impossible recruit: invalid cards '${active_id}' '${hidden_id}'");
+        }
+
+        if ($is_draft) {
+            // Start of game, give both recruits to player and discard others
+            $this->cards->moveCard($active_id, 'active', $player_id);
+            $this->cards->moveCard($hidden_id, 'hidden', $player_id);
+            foreach ($this->cards->getPlayerHand($player_id) as $card_id) {
+                // Discard remainder
+                $this->cards->playCard($card_id);
+            }
+        } else {
+            // Add new recruit (active) and discard other (hidden)
+            // Check if new recruit is already active or scored
+            $region = $this->getRecruitInfo($active_id)['region'];
+            if (self::getGameStateValue(GSV_RECRUIT_ACTIVE . $region) == 1) {
+                // New recruit already active
+                $this->cards->moveCard($active_id, 'active', $player_id);
+                if (self::getGameStateValue(GSV_RECRUIT_SCORE . $region) == 1) {
+                    // New recruit already scored
+                    $this->addStar($player_id, $active_id);
+                }
+            } else {
+                // Recruit not yet revealed
+                $this->cards->moveCard($active_id, 'hidden', $player_id);
+            }
+            $this->cards->playCard($hidden_id);
+        }
+
+        $this->gamestate->setPlayerNonMultiactive($player_id);
     }
 
     function actPlace($worker_id, $loc_name, $payment)
@@ -969,7 +1007,7 @@ class euphoria extends Table
         $player_id = self::getActivePlayerId();
 
         // Verify dilemma card
-        if (!$this->verifyCard($dilemma_id, DILEMMA, 'hand', $player_id)) {
+        if (!$this->verifyCard($dilemma_id, DILEMMA, 'hidden', $player_id)) {
             throw new feException("Impossible dilemma: invalid dilemma card '${dilemma_id}'");
         }
 
@@ -1005,7 +1043,7 @@ class euphoria extends Table
         foreach ($card_ids as $id) {
             $this->cards->playCard($id);
         }
-        $this->cards->moveCard($dilemma_id, 'table', $player_id);
+        $this->cards->moveCard($dilemma_id, 'active', $player_id);
 
         // Take action (score/recruit)
         if ($side == DILEMMA_LEFT) {

@@ -43,8 +43,9 @@ class action_euphoria extends APP_GameAction
     public function actGainRecruit()
     {
         self::setAjaxMode();
-        $id = self::getArg("id", AT_posint, true); // id of recruit card selected
-        $this->game->actRecruit(NULL, $id, false);
+        $selected = self::getArg("selected", AT_posint, true); // id of recruit card selected
+        $discard = self::getArg("discard", AT_posint, true); // id of recruit card not selected
+        $this->game->actRecruit($selected, $discard, false);
         self::ajaxResponse();
     }
 
