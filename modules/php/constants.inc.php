@@ -31,7 +31,10 @@ define("GSV_TRADE", "trade_counter");
 
 // Game options
 define("OPT_MARKET_STARS", 100);
-define("OPT_DOUBLES_PAY", 101);
+define("OPT_HOUSE_DOUBLES", 101);
+define("OPT_MARKET_DRAFT", 102);
+define("OPT_MORALE_DRAFT", 103);
+define("OPT_RECRUIT_DRAFT", 104);
 
 // Resources
 define("BLISS", "resource_bliss");
@@ -74,6 +77,10 @@ define("DECK_MARKET", "deck_" . MARKET);
 define("DECK_DILEMMA", "deck_" . DILEMMA);
 define("DILEMMA_LEFT", "dilemma_left");
 define("DILEMMA_RIGHT", "dilemma_right");
+
+define("CARD_HAND", "hand");
+define("CARD_IN_PLAY", "card_active");
+define("CARD_HIDDEN", "card_hidden");
 
 // Board regions
 define("ICARUS", "region_icarus");

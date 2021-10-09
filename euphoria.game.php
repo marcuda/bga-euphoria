@@ -225,7 +225,7 @@ class euphoria extends Table
 
             // Draw four recruit cards and one dilemma
             $this->cards->pickCards(4, DECK_RECRUIT, $player_id); // move to active/hidden after draft
-            $this->cards->pickCardForLocation(DECK_DILEMMA, 'hidden', $player_id); // not in hand per se
+            $this->cards->pickCardForLocation(DECK_DILEMMA, CARD_HIDDEN, $player_id); // not in hand per se
         }
 
         // Start with all players drafting recruits
@@ -442,7 +442,7 @@ class euphoria extends Table
         }
         foreach ($trade as $type => $nbr) {
             if (in_array($type, ARTIFACTS)) {
-                if (!$this->validateCard($nbr, $type, 'hand', $player_id)) {
+                if (!$this->validateCard($nbr, $type, CARD_HAND, $player_id)) {
                     throw new feException("Impossible trade: invalid card '${nbr}' (${type})");
                 }
             } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
@@ -462,7 +462,7 @@ class euphoria extends Table
     {
         foreach ($resources as $type => $nbr) {
             if (in_array($type, ARTIFACTS)) {
-                $this->cards->moveCard($nbr, 'hand', $player_two);
+                $this->cards->moveCard($nbr, CARD_HAND, $player_two);
             } else {
                 $this->incResource($player_one, $type, -$nbr);
                 $this->incResource($player_two, $type, $nbr);
@@ -560,7 +560,7 @@ class euphoria extends Table
     {
         if (in_array($location, TERRITORIES)) {
             // Territory - check stars again playes
-            $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${region}'";
+            $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${location}'";
             $nbr_filled = self::getUniqueValueFromDb($sql);
             $open = $nbr_filled < self::getPlayersNumber();
         } else if (in_array($location, MARKETS)) {
@@ -621,7 +621,7 @@ class euphoria extends Table
                 // Any artifacts
                 $cards = $payment[$type];
                 foreach ($cards as $card_id) {
-                    if (!$this->verifyCard($card_id, $type, 'hand', $player_id)) {
+                    if (!$this->verifyCard($card_id, $type, CARD_HAND, $player_id)) {
                         throw new feException("Impossible worker placement: bad card ${card_id}");
                     }
                 }
@@ -687,7 +687,7 @@ class euphoria extends Table
                 if (!in_array($type, $payment)) {
                     throw new feException("Impossible worker placement: no given '${type}'");
                 }
-                if (!$this->verifyCard($payment[$type], $type, 'hand', $player_id)) {
+                if (!$this->verifyCard($payment[$type], $type, CARD_HAND, $player_id)) {
                     throw new feException("Impossible worker placement: bad card ${card_id}");
                 }
             }
@@ -722,15 +722,15 @@ class euphoria extends Table
         }
 
         // Verify cards
-        if (!$this->verifyCard($active_id, RECRUIT, 'hand', $player_id) ||
-            !$this->verifyCard($hidden_id, RECRUIT, 'hand', $player_id)) {
+        if (!$this->verifyCard($active_id, RECRUIT, CARD_HAND, $player_id) ||
+            !$this->verifyCard($hidden_id, RECRUIT, CARD_HAND, $player_id)) {
             throw new feException("Impossible recruit: invalid cards '${active_id}' '${hidden_id}'");
         }
 
         if ($is_draft) {
             // Start of game, give both recruits to player and discard others
-            $this->cards->moveCard($active_id, 'active', $player_id);
-            $this->cards->moveCard($hidden_id, 'hidden', $player_id);
+            $this->cards->moveCard($active_id, CARD_IN_PLAY, $player_id);
+            $this->cards->moveCard($hidden_id, CARD_HIDDEN, $player_id);
             foreach ($this->cards->getPlayerHand($player_id) as $card_id) {
                 // Discard remainder
                 $this->cards->playCard($card_id);
@@ -741,14 +741,14 @@ class euphoria extends Table
             $region = $this->getRecruitInfo($active_id)['region'];
             if (self::getGameStateValue(GSV_RECRUIT_ACTIVE . $region) == 1) {
                 // New recruit already active
-                $this->cards->moveCard($active_id, 'active', $player_id);
+                $this->cards->moveCard($active_id, CARD_IN_PLAY, $player_id);
                 if (self::getGameStateValue(GSV_RECRUIT_SCORE . $region) == 1) {
                     // New recruit already scored
                     $this->addStar($player_id, $active_id);
                 }
             } else {
                 // Recruit not yet revealed
-                $this->cards->moveCard($active_id, 'hidden', $player_id);
+                $this->cards->moveCard($active_id, CARD_HIDDEN, $player_id);
             }
             $this->cards->playCard($hidden_id);
         }
@@ -795,6 +795,7 @@ class euphoria extends Table
 
 
         // 1. Bump
+        //TODO: what happens if player bumps self, has penalty, and can no longer pay???
         $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
         $row = self::getObjectFromDB($sql);
         if ($row !== null) {
@@ -969,7 +970,7 @@ class euphoria extends Table
                 throw new feException("Impossible retrieve: payment AND discard sent");
             }
 
-            if (!$this->verifyCard($discard_id, ARTIFACT, 'hand', $player_id)) {
+            if (!$this->verifyCard($discard_id, ARTIFACT, CARD_HAND, $player_id)) {
                 throw new feException("Impossible retrieve: invalid discard '${discard_id}'");
             }
         }
@@ -1007,7 +1008,7 @@ class euphoria extends Table
         $player_id = self::getActivePlayerId();
 
         // Verify dilemma card
-        if (!$this->verifyCard($dilemma_id, DILEMMA, 'hidden', $player_id)) {
+        if (!$this->verifyCard($dilemma_id, DILEMMA, CARD_HIDDEN, $player_id)) {
             throw new feException("Impossible dilemma: invalid dilemma card '${dilemma_id}'");
         }
 
@@ -1019,7 +1020,7 @@ class euphoria extends Table
             throw new feException("Impossible dilemma: too many cards played");
         }
         foreach ($cards_ids as $id) {
-            if (!$this->verifyCard($id, ARTIFACT, 'hand', $player_id)) {
+            if (!$this->verifyCard($id, ARTIFACT, CARD_HAND, $player_id)) {
                 throw new feException("Impossible dilemma: invalid artifact card '${id}'");
             }
         }
@@ -1033,7 +1034,7 @@ class euphoria extends Table
         $cost = ARTIFACTS[$card['type_arg']];
 
         if (count($card_ids) == 1) {
-            if (!$this->verifyCard($card_ids[0], $cost, 'hand', $player_id)) {
+            if (!$this->verifyCard($card_ids[0], $cost, CARD_HAND, $player_id)) {
                 throw new BgaUserException(self::_("You must play a ${cost} this dilemma"));
             }
         }
@@ -1043,7 +1044,7 @@ class euphoria extends Table
         foreach ($card_ids as $id) {
             $this->cards->playCard($id);
         }
-        $this->cards->moveCard($dilemma_id, 'active', $player_id);
+        $this->cards->moveCard($dilemma_id, CARD_IN_PLAY, $player_id);
 
         // Take action (score/recruit)
         if ($side == DILEMMA_LEFT) {
