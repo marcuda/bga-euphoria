@@ -746,14 +746,15 @@ class euphoria extends Table
             //TODO: translate loc_name to proper name
         }
 
-        //TODO: verify penalties
-
         // Verify player paid any cost
         if ($loc_cost !== null) {
             $this->verifyPayment($payment, $loc_cost);
         } else if (count($payment) != 0) {
             throw new feException("Impossible worker placement: no cost but payment given!");
         }
+
+        //TODO: verify penalties
+
 
         // 1. Bump
         $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
@@ -773,7 +774,7 @@ class euphoria extends Table
             }
         }
 
-        // 2. Take payment (json)
+        // 2. Take payment
         foreach ($payment as $type => $val) {
             if ($type == ARTIFACT) {
                 foreach ($val as $card) {
@@ -813,12 +814,17 @@ class euphoria extends Table
         if (in_array($loc_name, CON_SITES)) {
             // Determine how many construction sites are filled
             $market = substr($loc_name, 0, strlen(MARKETS[0]));
-            $workers = array();
+            $players = $this->loadPlayersBasicInfos();
+            foreach($players as $player_id) {
+                $players['workers'] = array();
+            }
+            $num_workers = 0;
             for ($i=0; $i<4; $i++) {
                 $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${market}_${i}'";
                 $row = self::getObjectFromDB($sql);
                 if ($row !== null) {
-                    $workers[$row['worker']] = $row['player'];
+                    $num_workers++;
+                    $players[$row['player']]['workers'][] = $row['worker'];
                 }
             }
 
@@ -832,14 +838,18 @@ class euphoria extends Table
                 $sites_needed = 4;
             }
 
-            if (count($workers) == $sites_needed) {
+            if ($num_workers == $sites_needed) {
                 // Market is complete, bump all players
-                foreach ($workers as $worker_id => $player_id) {
-                    //TODO: bump each player workers all at once? YES must only run Kcheck once
-                    //TODO: penalties/benefits
-                    $val = $this->activateWorker($worker_id);
-                    $this->knowledgeCheck($player_id);
-                    //TODO: notify
+                foreach ($players as $player_id => $player) {
+                    if (count($player['workers'] > 0) {
+                        // Bump all workers for a player before knowledge check
+                        foreach ($player['workers'] as $worker_id) {
+                            //TODO: penalties/benefits
+                            $val = $this->activateWorker($worker_id);
+                        }
+                        $this->knowledgeCheck($player_id);
+                        //TODO: notify
+                    }
                 }
 
                 // Flip market
@@ -847,13 +857,12 @@ class euphoria extends Table
                 //TODO: notify
 
                 // Place one star on market for each player
-                $players = array_unique($workers));
-                foreach ($players as $worker_id => $player_id) {
+                foreach ($players as $player_id) {
                     $this->addStar($player_id, $market);
                     //TODO: notify
                 }
 
-            } else if (count($workers) > $sites_needed) {
+            } else if ($num_workers > $sites_needed) {
                 throw new feException("Impossible worker placement: too many workers at market?!");
             }
         }
