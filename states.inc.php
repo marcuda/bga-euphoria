@@ -72,7 +72,74 @@ $machinestates = array(
         "transitions" => array("" => ST_NEXT)
     ),
 
-    ST_PLAY => array(
+    //actPlace => ST_BUMP => ST_ROLL => ST_PLACE => ST_MINE => ST_MARKET => ST_ROLL => ST_NEXT
+    ST_PLAYER_TURN => array(
+        "name" => "playerTurn",
+        "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
+        "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
+        "type" => "activeplayer",
+        "action" => "stPlay",
+        "args" => "argsPlay",
+        "possibleactions" => array("actPlace", "actRetrieve", "actDilemma", "actGainRecruit",
+                                   "actTradeOffer", "actPass", "actPenalty", "actBenefit"),
+        "transitions" => array(
+            "place" => ST_BUMP,
+            "retrieve" => ST_ROLL,
+            "dilemma" => ST_RECRUIT,
+            "trade" => ST_TRADE
+        )
+    ),
+
+    ST_BUMP => array(
+        "name" => "bumpWorker",
+        "description" => "",
+        "type" => "game",
+        "action" => "stBumpWorker",
+        "transitions" => array("" => ST_ROLL)
+    ),
+
+    //actRetrieve => ST_ROLL => ST_NEXT
+    ST_ROLL => array(
+        "name" => "rollWorker",
+        "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
+        "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
+        "type" => "activeplayer",
+        "action" => "stRoll",
+        "args" => "argsRoll",
+        "possibleactions" => array("actPlace", "actRetrieve", "actDilemma", "actGainRecruit",
+                                   "actTradeOffer", "actPass", "actPenalty", "actBenefit"),
+        "transitions" => array("" => ST_NEXT)
+    ),
+
+    ST_PLACE => array(
+        "name" => "placeWorker",
+        "description" => "",
+        "type" => "game",
+        "action" => "stPlace",
+        "args" => "argsPlace",
+        "transitions" => array("" => ST_MINE)
+    ),
+
+    ST_MINE => array(
+        "name" => "placeMine",
+        "description" => "",
+        "type" => "game",
+        "action" => "stMine",
+        "args" => "argsMine",
+        "transitions" => array("" => ST_MARKET)
+    ),
+
+    ST_MARKET => array(
+        "name" => "placeMarket",
+        "description" => "",
+        "type" => "game",
+        "action" => "stMarket",
+        "args" => "argsMarket",
+        "transitions" => array("" => ST_ROLL)
+    ),
+
+    //actDilemma => (ST_RECRUIT => ST_NEXT | ST_NEXT)
+    ST_RECRUIT => array(
         "name" => "playerTurn",
         "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
         "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
@@ -101,7 +168,7 @@ $machinestates = array(
         "type" => "game",
         "action" => "stNextPlayer",
         "updateGameProgression" => true,
-        "transitions" => array("play" => ST_PLAY, "trade" => ST_TRADE, "end" => ST_END)
+        "transitions" => array("play" => ST_PLAYER_TURN, "trade" => ST_TRADE, "end" => ST_END)
     ),
 
     // Final state.

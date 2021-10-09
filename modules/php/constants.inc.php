@@ -17,10 +17,17 @@
 // Game states
 define("ST_GAME_SETUP", 1);
 define("ST_DRAFT_RECRUITS", 10);
-define("ST_PLAY", 20);
-define("ST_TRADE", 30);
-define("ST_NEXT", 40);
+define("ST_PLAYER_TURN", 20);
+define("ST_BUMP", 30);
+define("ST_ROLL", 40);
+define("ST_PLACE", 50);
+define("ST_MINE", 60);
+define("ST_MARKET", 70);
+define("ST_RECRUIT", 75);
+define("ST_TRADE", 80);
+define("ST_NEXT", 90);
 define("ST_END", 99);
+
 
 // Game labels
 define("GSV_MARKET_BUILT", "market_built_");
