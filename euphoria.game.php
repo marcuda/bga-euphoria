@@ -603,6 +603,104 @@ class euphoria extends Table
         self::DbQuery($sql);
     }
 
+    /*
+     * Compare everything given as payment to the location cost
+     * Ensure all given resources and legal and available, and that nothing extra is given
+     * Raise exceptions for errors or if user cannot pay
+     */
+    function verifyPayment($payment, $cost)
+    {
+        $paid = array();
+        foreach ($cost as $type => $nbr) {
+            if ($type == ARTIFACT) {
+                // Any artifacts
+                $cards = $payment[$type];
+                foreach ($cards as $card_id) {
+                    if (!$this->verifyCard($card_id, $type, 'hand', $player_id)) {
+                        throw new feException("Impossible worker placement: bad card ${card_id}");
+                    }
+                }
+
+                if (count($cards) != $nbr) {
+                    if ($nbr == 3 && count($cards) == 2) {
+                        // Can use 2 of the same to pay for 3
+                        $a = $this->cards->getCard($cards[0]);
+                        $b = $this->cards->getCard($cards[1]);
+                        if ($a['type'] != $b['type']) {
+                            throw new feException("Impossible worker placement: wrong number cards");
+                        }
+                    } else {
+                        throw new feException("Impossible worker placement: wrong number cards");
+                    }
+                }
+            } else if ($type == RESOURCE) {
+                // Any resources
+                $name = $payment[$type];
+                if (!in_array($name, RESOURCES)) {
+                    throw new feException("Impossible worker placement: invalid resource '${name}'");
+                }
+                if (!$this->hasResource($player_id, $name, 1)) {
+                    throw new BgaUserException(self::_("You do not have enough ${name}"));
+                }
+                if ($name == BLISS && in_array(BLISS, $cost)) {
+                    // Cannot use Bliss as second resource when Bliss is required (Icarus)
+                    throw new BgaUserException(self::_("You cannot pay two Bliss for this action"));
+                }
+            } else if ($type == COMMODITY) {
+                // Any commodity
+                if ($nbr == 1) {
+                    $name = $payment[$type];
+                    if (!in_array($name, COMMODITIES)) {
+                        throw new feException("Impossible worker placement: invalid commodity '${name}'");
+                    }
+                    if (!$this->hasResource($player_id, $name, 1)) {
+                        throw new BgaUserException(self::_("You do not have enough ${name}"));
+                    }
+                } else {
+                    // Any 3 (Nimbus Loft)
+                    $cnt = 0;
+                    foreach ($payment as $c_name => $c_nbr) {
+                        if (!in_array($c_name, COMMODITIES)) {
+                            throw new feException("Impossible worker placement: invalid commodity '${c_name}'");
+                        }
+                        if (!$this->hasResource($player_id, $c_name, $c_nbr)) {
+                            throw new BgaUserException(self::_("You do not have enough ${c_name}"));
+                        }
+                        $cnt += $c_nbr
+                    }
+                    if ($cnt != $nbr) {
+                        throw new feException("Impossible worker placement: wrong number commodities");
+                    }
+                }
+            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                // Some number of specific resources or commodities
+                if (!$this->hasResource($player_id, $type, $nbr) {
+                    throw new BgaUserException(self::_("You do not have enough ${type}"));
+                }
+            } else if (in_array($type, ARTIFACTS)) {
+                // Some specific artifact card
+                if (!in_array($type, $payment)) {
+                    throw new feException("Impossible worker placement: no given '${type}'");
+                }
+                if (!$this->verifyCard($payment[$type], $type, 'hand', $player_id)) {
+                    throw new feException("Impossible worker placement: bad card ${card_id}");
+                }
+            }
+
+            // Record as paid
+            $paid[$type] = $payment[$type];
+            $payment[$type] = null;
+        }
+
+        // Verify nothing extra sent
+        foreach ($payment as $type => $nbr) {
+            if ($nbr !== null) {
+                throw new feException("Impossible worker placement: extra values in payment payload");
+            }
+        }
+
+    }
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Player actions
@@ -651,95 +749,10 @@ class euphoria extends Table
         //TODO: verify penalties
 
         // Verify player paid any cost
-        $paid = array();
         if ($loc_cost !== null) {
-            foreach ($loc_cost as $type => $nbr) {
-                if ($type == ARTIFACT) {
-                    // Any artifacts
-                    $cards = $payment[$type];
-                    foreach ($cards as $card_id) {
-                        if (!$this->verifyCard($card_id, $type, 'hand', $player_id)) {
-                            throw new feException("Impossible worker placement: bad card ${card_id}");
-                        }
-                    }
-
-                    if (count($cards) != $nbr) {
-                        if ($nbr == 3 && count($cards) == 2) {
-                            // Can use 2 of the same to pay for 3
-                            $a = $this->cards->getCard($cards[0]);
-                            $b = $this->cards->getCard($cards[1]);
-                            if ($a['type'] != $b['type']) {
-                                throw new feException("Impossible worker placement: wrong number cards");
-                            }
-                        } else {
-                            throw new feException("Impossible worker placement: wrong number cards");
-                        }
-                    }
-                } else if ($type == RESOURCE) {
-                    // Any resources
-                    $name = $payment[$type];
-                    if (!in_array($name, RESOURCES)) {
-                        throw new feException("Impossible worker placement: invalid resource '${name}'");
-                    }
-                    if (!$this->hasResource($player_id, $name, 1)) {
-                        throw new BgaUserException(self::_("You do not have enough ${name}"));
-                    }
-                    if ($name == BLISS && in_array(BLISS, $loc_cost)) {
-                        // Cannot use Bliss as second resource when Bliss is required (Icarus)
-                        throw new BgaUserException(self::_("You cannot pay two Bliss for this action"));
-                    }
-                } else if ($type == COMMODITY) {
-                    // Any commodity
-                    if ($nbr == 1) {
-                        $name = $payment[$type];
-                        if (!in_array($name, COMMODITIES)) {
-                            throw new feException("Impossible worker placement: invalid commodity '${name}'");
-                        }
-                        if (!$this->hasResource($player_id, $name, 1)) {
-                            throw new BgaUserException(self::_("You do not have enough ${name}"));
-                        }
-                    } else {
-                        // Any 3 (Nimbus Loft)
-                        $cnt = 0;
-                        foreach ($payment as $c_name => $c_nbr) {
-                            if (!in_array($c_name, COMMODITIES)) {
-                                throw new feException("Impossible worker placement: invalid commodity '${c_name}'");
-                            }
-                            if (!$this->hasResource($player_id, $c_name, $c_nbr)) {
-                                throw new BgaUserException(self::_("You do not have enough ${c_name}"));
-                            }
-                            $cnt += $c_nbr
-                        }
-                        if ($cnt != $nbr) {
-                            throw new feException("Impossible worker placement: wrong number commodities");
-                        }
-                    }
-                } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
-                    // Some number of specific resources or commodities
-                    if (!$this->hasResource($player_id, $type, $nbr) {
-                        throw new BgaUserException(self::_("You do not have enough ${type}"));
-                    }
-                } else if (in_array($type, ARTIFACTS)) {
-                    // Some specific artifact card
-                    if (!in_array($type, $payment)) {
-                        throw new feException("Impossible worker placement: no given '${type}'");
-                    }
-                    if (!$this->verifyCard($payment[$type], $type, 'hand', $player_id)) {
-                        throw new feException("Impossible worker placement: bad card ${card_id}");
-                    }
-                }
-
-                // Record as paid
-                $paid[$type] = $payment[$type];
-                $payment[$type] = null;
-            }
-        }
-
-        // Verify nothing extra sent
-        foreach ($payment as $type => $nbr) {
-            if ($nbr !== null) {
-                throw new feException("Impossible worker placement: extra values in payment payload");
-            }
+            $this->verifyPayment($payment, $loc_cost);
+        } else if (count($payment) != 0) {
+            throw new feException("Impossible worker placement: no cost but payment given!");
         }
 
         // 1. Bump
@@ -761,7 +774,7 @@ class euphoria extends Table
         }
 
         // 2. Take payment (json)
-        foreach ($paid as $type => $val) {
+        foreach ($payment as $type => $val) {
             if ($type == ARTIFACT) {
                 foreach ($val as $card) {
                     $this->cards->playCard($card);
