@@ -72,7 +72,6 @@ $machinestates = array(
         "transitions" => array("" => ST_NEXT)
     ),
 
-    //actPlace => ST_BUMP => ST_ROLL => ST_PLACE => ST_MINE => ST_MARKET => ST_ROLL => ST_NEXT
     ST_PLAYER_TURN => array(
         "name" => "playerTurn",
         "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
@@ -83,10 +82,12 @@ $machinestates = array(
         "possibleactions" => array("actPlace", "actRetrieve", "actDilemma", "actGainRecruit",
                                    "actTradeOffer", "actPass", "actPenalty", "actBenefit"),
         "transitions" => array(
-            "place" => ST_BUMP,
-            "retrieve" => ST_ROLL,
-            "dilemma" => ST_RECRUIT,
-            "trade" => ST_TRADE
+            TX_PLACE => ST_PLACE,
+            TX_BUMP => ST_BUMP,
+            TX_RETRIEVE => ST_RETRIEVE,
+            TX_DILEMMA => ST_RECRUIT,
+            TX_TRADE => ST_TRADE,
+            TX_NEXT => ST_NEXT,
         )
     ),
 
@@ -94,13 +95,15 @@ $machinestates = array(
         "name" => "bumpWorker",
         "description" => "",
         "type" => "game",
-        "action" => "stBumpWorker",
-        "transitions" => array("" => ST_ROLL)
+        "action" => "stBump",
+        "transitions" => array(
+            TX_PLACE => ST_PLACE,
+            TX_NEXT => ST_NEXT,
+        )
     ),
 
-    //actRetrieve => ST_ROLL => ST_NEXT
-    ST_ROLL => array(
-        "name" => "rollWorker",
+    ST_RETRIEVE => array(
+        "name" => "retrieveWorker",
         "description" => clienttranslate('${actplayer} must place or retrieve their worker(s)'),
         "descriptionmyturn" => clienttranslate('${you} must place or retrieve worker(s)'),
         "type" => "activeplayer",
@@ -117,25 +120,32 @@ $machinestates = array(
         "type" => "game",
         "action" => "stPlace",
         "args" => "argsPlace",
-        "transitions" => array("" => ST_MINE)
+        "transitions" => array(
+            TX_MINE => ST_MINE,
+            TX_MARKET => ST_MARKET,
+            TX_NEXT => ST_NEXT,
+        )
     ),
 
     ST_MINE => array(
-        "name" => "placeMine",
+        "name" => "placeAtMine",
         "description" => "",
         "type" => "game",
         "action" => "stMine",
         "args" => "argsMine",
-        "transitions" => array("" => ST_MARKET)
+        "transitions" => array("" => ST_NEXT)
     ),
 
     ST_MARKET => array(
-        "name" => "placeMarket",
+        "name" => "placeAtMarket",
         "description" => "",
         "type" => "game",
         "action" => "stMarket",
         "args" => "argsMarket",
-        "transitions" => array("" => ST_ROLL)
+        "transitions" => array(
+            TX_BUMP => ST_BUMP,
+            TX_NEXT => ST_NEXT,
+        )
     ),
 
     //actDilemma => (ST_RECRUIT => ST_NEXT | ST_NEXT)
@@ -159,7 +169,28 @@ $machinestates = array(
         "action" => "stTrade",
         "args" => "argsTrade",
         "possibleactions" => array("actTradeAccept", "actTradeConfirm", "actTradeCancel"),
-        "transitions" => array("" => ST_NEXT)
+        "transitions" => array(
+            "" => ST_PLAYER_TURN,
+            TX_TRADE => ST_TRADE_GAME,
+            TX_CANCEL => ST_TRADE_CANCEL,
+        )
+    ),
+
+    ST_TRADE_GAME => array(
+        "name" => "gameTrade",
+        "type" => "game",
+        "action" => "stTrade",
+        "transitions" => array(
+            TX_TRADE => ST_TRADE,
+            TX_NEXT => ST_PLAYER_TURN,
+        ),
+    ),
+
+    ST_TRADE_CANCEL => array(
+        "name" => "cancelTrade",
+        "type" => "game",
+        "action" => "stTradeCancel",
+        "transitions" => array("", ST_PLAYER_TURN),
     ),
 
     ST_NEXT => array(

@@ -19,15 +19,26 @@ define("ST_GAME_SETUP", 1);
 define("ST_DRAFT_RECRUITS", 10);
 define("ST_PLAYER_TURN", 20);
 define("ST_BUMP", 30);
-define("ST_ROLL", 40);
+define("ST_RETRIEVE", 40);
 define("ST_PLACE", 50);
 define("ST_MINE", 60);
 define("ST_MARKET", 70);
 define("ST_RECRUIT", 75);
 define("ST_TRADE", 80);
+define("ST_TRADE_GAME", 81);
+define("ST_TRADE_CANCEL", 82);
 define("ST_NEXT", 90);
 define("ST_END", 99);
 
+define("TX_BUMP", "tx_bump");
+define("TX_DILEMMA", "tx_dilemma");
+define("TX_MARKET", "tx_market");
+define("TX_MINE", "tx_mine");
+define("TX_NEXT", "tx_next");
+define("TX_PLACE", "tx_place");
+define("TX_RETRIEVE", "tx_retrieve");
+define("TX_TRADE", "tx_trade");
+define("TX_CANCEL", "tx_trade_canx");
 
 // Game labels
 define("GSV_MARKET_BUILT", "market_built_");
@@ -98,6 +109,7 @@ define("SUBTERRA", "region_subterra");
 // Board locations
 define("INACTIVE", "loc_inactive");
 define("ACTIVE", "loc_active");
+define("BUMPED", "loc_bump");
 define("WIND_SALOON", "loc_wind_saloon");
 define("NIMBUS_LOFT", "loc_nimbus_loft");
 define("BREEZE_BAR", "loc_breeze_bar");

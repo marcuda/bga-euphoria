@@ -64,6 +64,14 @@ class euphoria extends Table
             GSV_RECRUIT_SCORE . WASTELANDS => 32,
             GSV_RECRUIT_SCORE . ICARUS => 33,
             GSV_TRADE => 34,
+            'active_player' => 35,
+            'active_loc' => 36,
+            'active_state' => 37,
+            'keep_player' => 38,
+            'bump_player' => 39,
+            'bump_worker' => 40,
+
+            'LAST_GLOBAL' => 89,
             //      ...
             //    "my_first_game_variant" => 100,
             //    "my_second_game_variant" => 101,
@@ -112,19 +120,11 @@ class euphoria extends Table
         /************ Start the game initialization *****/
 
         // Init global values with their initial values
-        foreach (MARKETS as $market) {
-            self::setGameStateInitialValue(GSV_MARKET_BUILT . $market, 0);
-        }
-        foreach (REGIONS as $region) {
-            self::setGameStateInitialValue(GSV_TRACK_POS . $region, 0);
-            self::setGameStateInitialValue(GSV_RECRUIT_ACTIVE . $region, 0);
-            self::setGameStateInitialValue(GSV_RECRUIT_SCORE . $region, 0);
-            if ($region != ICARUS) {
-                self::setGameStateInitialValue(GSV_MINER_POS . $region, 0);
-                self::setGameStateInitialValue(GSV_TUNNEL_OPEN . $region, 0);
+        foreach ($this->GAMESTATELABELS as $value_label => $ID) {
+            if ($ID >= 10 && $ID < 90) {
+                self::setGameStateInitialValue($value_label, 0);
             }
         }
-        self::setGameStateInitialValue(GSV_TRADE, 0);
         
         // Init game statistics
         // (note: statistics used in this file must be defined in your stats.inc.php file)
@@ -262,6 +262,9 @@ class euphoria extends Table
         $result['resources'] = self::getCollectionFromDb("SELECT * FROM resource");
         $result['workers'] = self::getCollectionFromDb("SELECT * FROM worker");
         $result['hand'] = $this->cards->getPlayerHand($current_player_id);
+
+        //XXX debug
+        $result['globals'] = array_combine(array_keys($this->GAMESTATELABELS), array_map('self::getGameStateValue', array_keys($this->GAMESTATELABELS)));
   
         return $result;
     }
@@ -293,22 +296,38 @@ class euphoria extends Table
     */
 
     /*
+     * Set the location, and optionally value, of a worker
+     */
+    function moveWorker($worker_id, $loc, $val=null)
+    {
+        // Verify inputs
+        if (!is_numeric($worker_id) || !in_array($loc, LOCATIONS) || ($val !== null && !is_numeric($val))) {
+            throw new feException("Invalid inputs to moveWorker '${worker_id}, ${loc}, ${val}'");
+        }
+
+        $sql = "UPDATE worker SET worker_loc = '". $loc ."'";
+        if ($val !== null) {
+            $sql .= ", worker_val = ${val}";
+        }
+        $sql .= " WHERE worker_id = ${worker_id}";
+        self::DbQuery($sql);
+    }
+
+    /*
      * Helper function to get value of a random die roll (1-6)
      */
-    function die_roll()
+    function dieRoll()
     {
         return bga_rand(1, 6);
     }
 
     /*
-     * Roll die and set to active. Return worker value.
+     * Roll worker and set to active. Return worker value.
      */
     function activateWorker($worker_id)
     {
-        $val = die_roll();
-        $sql = "UPDATE worker SET worker_loc = '". ACTIVE ."', ";
-        $sql .= " worker_val = ${val} WHERE worker_id = ${worker_id}";
-        self::DbQuery($sql);
+        $val = dieRoll();
+        $this->moveWorker($worker_id, ACTIVE, $val);
         return $val;
     }
 
@@ -346,7 +365,7 @@ class euphoria extends Table
             $sql .= " ORDER BY worker_val DESC LIMIT 1";
             $id = self::getUniqueValuefromDb($sql);
 
-            $sql = "UPDATE worker SET worker_loc = '" . INACTIVE . "' WHERE worker_id = ${id}";
+            $this->moveWorker($id, INACTIVE);
             //TODO notify
         }
     }
@@ -481,11 +500,11 @@ class euphoria extends Table
             } else if ($type == ARTIFACT) {
                 $this->cards->pickCards($nbr, DECK_ARTIFACT, $player_id);
             } else if ($type == INFLUENCE) {
-                $pos = self::incGameStateValue(GSV_TRACK_POS . $region);
+                $pos = self::incGameStateValue(GSV_TRACK_POS . $region, 1);
                 if ($pos == 8) {
                     $this->activateRecruits($region);
                 } else if ($pos == 11) {
-                    self::incGameStateValue(GSV_RECRUIT_SCORE . $region);
+                    self::incGameStateValue(GSV_RECRUIT_SCORE . $region, 1);
                     //TODO gain stars
                     //TODO: how track this?
                 }
@@ -615,7 +634,7 @@ class euphoria extends Table
      */
     function verifyPayment($payment, $cost)
     {
-        $paid = array();
+        $paid = array(); // store each resource
         foreach ($cost as $type => $nbr) {
             if ($type == ARTIFACT) {
                 // Any artifacts
@@ -624,6 +643,7 @@ class euphoria extends Table
                     if (!$this->verifyCard($card_id, $type, CARD_HAND, $player_id)) {
                         throw new feException("Impossible worker placement: bad card ${card_id}");
                     }
+                    $paid[] = array('type' => ARTIFACT, 'nbr' => $card_id);
                 }
 
                 if (count($cards) != $nbr) {
@@ -651,6 +671,7 @@ class euphoria extends Table
                     // Cannot use Bliss as second resource when Bliss is required (Icarus)
                     throw new BgaUserException(self::_("You cannot pay two Bliss for this action"));
                 }
+                $paid[] = array('type' => $name, 'nbr' => 1);
             } else if ($type == COMMODITY) {
                 // Any commodity
                 if ($nbr == 1) {
@@ -661,6 +682,7 @@ class euphoria extends Table
                     if (!$this->hasResource($player_id, $name, 1)) {
                         throw new BgaUserException(self::_("You do not have enough ${name}"));
                     }
+                    $paid[] = array('type' => $name, 'nbr' => 1);
                 } else {
                     // Any 3 (Nimbus Loft)
                     $cnt = 0;
@@ -672,6 +694,8 @@ class euphoria extends Table
                             throw new BgaUserException(self::_("You do not have enough ${c_name}"));
                         }
                         $cnt += $c_nbr
+                        $paid[] = array('type' => $c_name, 'nbr' => $c_nbr);
+                        //TODO: this will die because payment isn't updated, won't it?
                     }
                     if ($cnt != $nbr) {
                         throw new feException("Impossible worker placement: wrong number commodities");
@@ -682,6 +706,7 @@ class euphoria extends Table
                 if (!$this->hasResource($player_id, $type, $nbr) {
                     throw new BgaUserException(self::_("You do not have enough ${type}"));
                 }
+                $paid[] = array('type' => $type, 'nbr' => $nbr);
             } else if (in_array($type, ARTIFACTS)) {
                 // Some specific artifact card
                 if (!in_array($type, $payment)) {
@@ -690,10 +715,10 @@ class euphoria extends Table
                 if (!$this->verifyCard($payment[$type], $type, CARD_HAND, $player_id)) {
                     throw new feException("Impossible worker placement: bad card ${card_id}");
                 }
+                $paid[] = array('type' => $type, 'nbr' => $nbr);
             }
 
             // Record as paid
-            $paid[$type] = $payment[$type];
             $payment[$type] = null;
         }
 
@@ -704,6 +729,14 @@ class euphoria extends Table
             }
         }
 
+        // Store payment details for state transition
+        foreach ($paid as $idx => $resource) {
+            $type = $resource['type'];
+            $nbr = $resource['nbr'];
+            $sql = "INSERT INTO resource (player_id, resource_type, resource_count)";
+            $sql .= " VALUES (0, '${type}', ${nbr})";
+            self::DbQuery($sql);
+        }
     }
 
 
@@ -793,146 +826,49 @@ class euphoria extends Table
 
         //TODO: verify penalties
 
-
-        // 1. Bump
-        //TODO: what happens if player bumps self, has penalty, and can no longer pay???
-        $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${loc_name}'";
-        $row = self::getObjectFromDB($sql);
-        if ($row !== null) {
-            if (in_array($loc_name, CON_SITES)) {
-                throw new BgaUserException(self::_("You cannot bump a worker from a construction site."));
+        // Check if player has, and is using, doubles
+        // TODO: store this info on player turn start
+        $sql = "SELECT double_turn FROM worker WHERE worker_id = ${worker_id}";
+        $val = self::getUniqueValueFromDB($sql);
+        if ((int)$val != 0) {
+            // Check if any other dups remain
+            $sql = "SELECT count(1) FROM worker WHERE double_turn != 0 ";
+            $sql .= " AND worker_id != ${worker_id} AND player_id = ${player_id}";
+            $cnt = self::getUniqueValueFromDB($sql);
+            if ((int)$cnt > 0) {
+                // Yes, player gets another turn
+                self::setGameStateLabel('keep_player', 1);
             }
 
-            if (!in_array($loc_name, COMMODITY_AREAS)) { // no bump in commodities
-                $bump_player = $row['player'];
-                $bump_worker = $row['worker'];
-                //TODO: penalties/benefits
-                $val = $this->activateWorker($bump_worker);
-                $this->knowledgeCheck($bump_player);
-                //TODO: notify
-            }
+            // Mark worker as used
+            self::DbQuery("UPDATE worker SET double_turn = 0 WHERE worker_id = ${worker_id}");
         }
 
-        // 2. Take payment
-        foreach ($payment as $type => $val) {
-            if ($type == ARTIFACT) {
-                foreach ($val as $card) {
-                    $this->cards->playCard($card);
+        // Move is valid, continue
+        self::setGameStateValue('active_player', $player_id);
+        self::setGameStateValue('active_loc', $loc_id);//TODO
+        self::setGameStateValue('active_state', $this->gamestate->state_id());
+        $next_state = TX_PLACE;
+
+        // Bump
+        if (!in_array($loc_name, COMMODITY_AREAS)) { // no bump in commodities
+            $sql = "SELECT worker_id FROM worker WHERE worker_loc = '${loc_name}'";
+            $worker_id = self::getUniqueValueFromDb($sql);
+            if ($worker_id !== null) {
+                if (in_array($loc_name, CON_SITES)) {
+                    throw new BgaUserException(self::_("You cannot bump a worker from a construction site."));
                 }
-            } else if (in_array($type, ARTIFACTS)) {
-                $this->cards->playCard($val);
-            } else if ($type == RESOURCE || $type == COMMODITY) {
-                $this->incResource($player_id, $val, -1);
-            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
-                $this->incResource($player_id, $type, -$val);
+
+                $this->moveWorker($worker_id, BUMPED);
+                $next_state = TX_BUMP;
             }
-            //TODO: notify
         }
 
-        // 3. Move worker
-        $sql = "UPDATE worker SET worker_location = ${loc_name} WHERE worker_id = ${worker_id}";
-        self::DbQuery($sql);
+        // Move worker
+        $this->moveWorker($worker_id, $loc_name);
         //TODO: notify
 
-        // 4. Mine
-        if (in_array(TUNNELS, $loc_name)) {
-            $val = self::incGameStateValue(GSV_MINER_POS . $loc_region);
-            if ($val == 6) {
-                $this->activateRecruits($loc_region);
-            }
-            if ($val == 9) {
-                self::incGameStateValue(GSV_TUNNEL_OPEN . $loc_region);
-                //TODO: notify miner move, tunnel open
-            }
-            if ($val < 9) {
-                //TODO: notify miner move
-            }
-        }
-
-        // 5. Market
-        if (in_array($loc_name, CON_SITES)) {
-            // Determine how many construction sites are filled
-            $market = substr($loc_name, 0, strlen(MARKETS[0]));
-            $players = $this->loadPlayersBasicInfos();
-            foreach($players as $player_id) {
-                $players['workers'] = array();
-            }
-            $num_workers = 0;
-            for ($i=0; $i<4; $i++) {
-                $sql = "SELECT player_id player, worker_id worker FROM worker WHERE worker_loc = '${market}_${i}'";
-                $row = self::getObjectFromDB($sql);
-                if ($row !== null) {
-                    $num_workers++;
-                    $players[$row['player']]['workers'][] = $row['worker'];
-                }
-            }
-
-            // Numbers sites required for player count
-            $num_player = self::getPlayersNumber();
-            if ($num_player < 4) {
-                $sites_needed = 2;
-            } else if ($num_player == 4) {
-                $sites_needed = 3;
-            } else {
-                $sites_needed = 4;
-            }
-
-            if ($num_workers == $sites_needed) {
-                // Market is complete, bump all players
-                foreach ($players as $player_id => $player) {
-                    if (count($player['workers'] > 0) {
-                        // Bump all workers for a player before knowledge check
-                        foreach ($player['workers'] as $worker_id) {
-                            //TODO: penalties/benefits
-                            $val = $this->activateWorker($worker_id);
-                        }
-                        $this->knowledgeCheck($player_id);
-                        //TODO: notify
-                    }
-                }
-
-                // Flip market
-                self::incGameStateValue(GSV_MARKET_BUILT . $market);
-                //TODO: notify
-
-                // Place one star on market for each player
-                foreach ($players as $player_id) {
-                    $this->addStar($player_id, $market);
-                    //TODO: notify
-                }
-
-            } else if ($num_workers > $sites_needed) {
-                throw new feException("Impossible worker placement: too many workers at market?!");
-            }
-        }
-
-        // 6. Benefit
-        if (in_array($loc_name, COMMODITIY_AREAS)) {
-            // Commodity benefit depends on total knowledge of workers at location
-            $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '${loc_name}'";
-            $val = self::getUniqueValueFromDb($sql);
-            if ($val < 5) {
-                $idx = 0;
-            } else if ($val < 9) {
-                $idx = 1;
-            } else {
-                $idx = 2;
-            }
-            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_name, $loc_region);
-        } else if (in_array($loc_name, TUNNELS)) {
-            if ($this->hasLocationBenefit($loc_name, $player_id)) {
-                $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
-            } else {
-                // player must choose...how?
-                //TODO; separate action
-                //OR force it to come in with move, yes? Easy, but many Recruits will require choice...
-            }
-        } else if ($loc_benefit !== null) {
-            $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
-        }
-        //TODO: notify
-
-        // 7. doubles? TODO
+        $this->gamestate->nextState($next_state);
     }
 
     function actRetrieve($worker_ids, $payment, $discard_id)
@@ -1027,7 +963,7 @@ class euphoria extends Table
 
         // Verify action
         if ($side != DILEMMA_LEFT && $side != DILEMMA_RIGHT) {
-            throw new feException("Impossible dilemma: invalide choice '${side}'");
+            throw new feException("Impossible dilemma: invalid choice '${side}'");
         }
 
         $card = $this->cards->getCard($dilemma_id);
@@ -1066,7 +1002,7 @@ class euphoria extends Table
         // Verify players
         $player_no = self:getPlayerNoById($other_player);
         if ($other_player === null || $player_no === null || $player_id == $other_player) {
-            throw new feException("Impossible trade: invalide player '${other_player}'");
+            throw new feException("Impossible trade: invalid player '${other_player}'");
         }
 
         // Verify trade goods
@@ -1074,14 +1010,13 @@ class euphoria extends Table
 
         // Store trade info
         $data = json_encode($trade);
-        $id = self::incGameStateValue(GSV_TRADE);
+        $trade_id = self::incGameStateValue(GSV_TRADE, 1);
         $sql = "INSERT INTO trade (trade_id, player_one, player_two, trade_offer)";
-        $sql .= " VALUES (${id}, ${player_id}, ${other_player}, '${data}')";
+        $sql .= " VALUES (${trade_id}, ${player_id}, ${other_player}, '${data}')";
         self::DbQuery($sql);
 
         //TODO: notify
-        $this->gamestate->changeActivePlayer($other_player);
-        $this->gamestate->nextState("trade");
+        $this->gamestate->nextState(TX_TRADE);
     }
 
     function actTradeAccept($trade)
@@ -1089,24 +1024,23 @@ class euphoria extends Table
         self::checkAction('actTradeAccept'); 
         $player_id = self::getActivePlayerId();
 
+        // Verify active trade
+        $trade_id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${trade_id}");
+        if ($row === null || $row['player_two'] != $player_id) {
+            throw new feException("Impossible trade: no active trade '${trade_id}' for player '${player_id}'");
+        }
+
         // Verify trade goods
         $this->verifyTrade($player_id, $trade);
 
-        // Verify active trade
-        $id = self::getGameStateValue(GSV_TRADE);
-        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
-        if ($row === null || $row['player_two'] != $player_id) {
-            throw new feException("Impossible trade: no active trade '${id}' for player '${player_id}'");
-        }
-
         // Store trade info
         $data = json_encode($trade);
-        $sql = "UPDATE trade SET trade_return = '${data}' WHERE trade_id = ${id}";
+        $sql = "UPDATE trade SET trade_return = '${data}' WHERE trade_id = ${trade_id}";
         self::DbQuery($sql);
 
         //TODO: notify
-        $this->gamestate->changeActivePlayer($row['player_one']);
-        $this->gamestate->nextState("trade");
+        $this->gamestate->nextState(TX_TRADE);
     }
 
     function actTradeConfirm()
@@ -1115,10 +1049,10 @@ class euphoria extends Table
         $player_id = self::getActivePlayerId();
 
         // Verify active trade
-        $id = self::getGameStateValue(GSV_TRADE);
-        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
+        $trade_id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${trade_id}");
         if ($row === null || $row['player_one'] != $player_id) {
-            throw new feException("Impossible trade: no active trade '${id}' for player '${player_id}'");
+            throw new feException("Impossible trade: no active trade '${trade_id}' for player '${player_id}'");
         }
 
         // Perform trade
@@ -1140,22 +1074,22 @@ class euphoria extends Table
         $player_id = self::getActivePlayerId();
 
         // Verify active trade
-        $id = self::getGameStateValue(GSV_TRADE);
-        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${id}");
+        $trade_id = self::getGameStateValue(GSV_TRADE);
+        $row = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${trade_id}");
         if ($row === null) {
-            throw new feException("Impossible trade: cannot cancel trade '${id}'")
+            throw new feException("Impossible trade: cannot cancel trade '${trade_id}'")
         }
 
         //TODO: notify
-        // Return play to player offering trade
-        $this->gamestate->changeActivePlayer($row['player_one']);
-        $this->gamestate->nextState();
+        $this->gamestate->nextState(TX_CANCEL);
     }
 
     function actPass()
     {
         self::checkAction('actPass'); 
-        $this->gamestate->nextState();
+        //TODO: why/how pass? if only for using double then need to reset doubles here:
+        //self::DbQuery("UPDATE worker SET double_turn = 0");
+        $this->gamestate->nextState(TX_NEXT);
     }
 
     function actPenalty($payment)
@@ -1270,6 +1204,256 @@ class euphoria extends Table
     {
         //TODO: check end game
     }
+
+    function stBump()
+    {
+        $sql = "SELECT player_id, worker_id FROM worker WHERE worker_loc = '" . BUMPED . "'";
+        $workers = self::getCollectionFromDB($sql, true);
+        if (count($workers) == 0) {
+            //TODO: _can_ we get here?
+            throw new feException("Illegal BUMP state: no worker to bump!");
+        } else if (count($workers) > 1) {
+            // Market construction
+            // Regroup workers by player as all need to be rolled at once
+            $players = $this->loadPlayersBasicInfos();
+            foreach($players as $player_id) {
+                $players['workers'] = array();
+            }
+            foreach ($workers as $player_id => $worker_id) {
+                $players[$player_id]['workers'][] = $worker_id;
+            }
+        } else {
+            $players = $workers;
+        }
+
+        $prev_state = self::getGameStateValue('active_state');
+        if ($prev_state == ST_PLACE) {
+            $next_state = "place";
+        } else if ($prev_state == ST_MARKET) {
+            $next_state = "next";
+        } else {
+            throw new feException("Invalid state transition to bump '${prev_state}'");
+        }
+
+        $active_players = array();
+        foreach ($players as $player_id => $workers) {
+            //TODO: penalties/benefits
+            if (is_array($workers)) {
+                foreach ($workers as $idx => $worker_id) {
+                    $val = $this->activateWorker($worker_id);
+                }
+            } else {
+                $val = $this->activateWorker($worker_id);
+            }
+            $this->knowledgeCheck($player_id);
+            //TODO: notify
+
+            //TODO: activate if needed
+            //XXX THIS IS GOING TO BE MORE COMPLICATED THAN CURRENTLY SUPPORTED, ISN'T IT???
+            //$active_players[] = $player_id
+        }
+
+        $this->gamestate->setPlayersMultiactive($active_players, $next_state, true);
+    }
+
+    //TODO: all these transitions need to be worked out in states...incomplte code
+    function stPlace()
+    {
+        $player_id = self::getGameStateValue('active_player');
+        $loc_id = self::getGameStateValue('active_loc');
+        $location = LOCATIONS[$loc_id];
+        $loc_cost = $location['cost'];
+        $loc_benefit = $location['benefit'];
+        $loc_region = $location['region'];
+
+        $sql = "SELECT resource_type type, resource_count nbr FROM resource WHERE player_id = 0";
+        $payment = self::getObjectListFromDB($sql);
+
+        // Clear stored payment resources
+        if (count($payment) > 0) {
+            self::DbQuery("DELETE FROM resource WHERE player_id = 0");
+        }
+
+
+        // Verify payment still available
+        $can_pay = true;
+        foreach ($payment as $idx => $resource) {
+            $type = $resource['type'];
+            if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                if (!$this->hasResource($player_id, $type, $resource['nbr'])) {
+                    $can_pay = false;
+                    break;
+                }
+            }
+        }
+
+        if (!$can_pay) {
+            // Player lost resources and can no longer pay clost
+            // Worker is placed but no benefits gained; skip everything else
+            // https://boardgamegeek.com/thread/1994424/timing-bumping-and-market-penalties
+            $this->gamestate->nextState(TX_NEXT);
+            return;
+        }
+
+        // Take payment
+        foreach ($payment as $idx => $resource) {
+            $type = $resource['type'];
+            $nbr = $resource['nbr'];
+            if ($type == ARTIFACT || in_array($type, ARTIFACTS)) {
+                $this->cards->playCard($nbr);
+            } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
+                $this->incResource($player_id, $type, -$nbr);
+            }
+            //TODO: notify
+        }
+
+        // Gain benefit
+        if (in_array($loc_name, COMMODITIY_AREAS)) {
+            // Commodity benefit depends on total knowledge of workers at location
+            $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '${loc_name}'";
+            $val = self::getUniqueValueFromDb($sql);
+            if ($val < 5) {
+                $idx = 0;
+            } else if ($val < 9) {
+                $idx = 1;
+            } else {
+                $idx = 2;
+            }
+            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_name, $loc_region);
+            //TODO: aleg benefit
+        } else if (in_array($loc_name, TUNNELS)) {
+            if ($this->hasLocationBenefit($loc_name, $player_id)) {//TODO
+                $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
+            } else {
+                // player must choose...how?
+                //TODO; separate action
+                //OR force it to come in with move, yes? Easy, but many Recruits will require choice...
+            }
+        } else if ($loc_benefit !== null) {
+            $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
+        }
+        //TODO: notify
+
+
+        // Possible additional actions
+        if (in_array(TUNNELS, $loc_name)) {
+            $this->gamestate->nextState(TX_MINE);
+        } else if (in_array($loc_name, CON_SITES)) {
+            $this->gamestate->nextState(TX_MARKET);
+        } else {
+            //TODO: active player?
+            // 7. doubles? TODO
+            $this->gamestate->nextState(TX_NEXT);
+        }
+
+    }
+
+    function stMine()
+    {
+        $loc_id = self::getGameStateValue('active_loc');
+        $location = LOCATIONS[$loc_id];//TODO
+        $loc_region = $location['region'];
+
+        $val = self::incGameStateValue(GSV_MINER_POS . $loc_region, 1);
+        if ($val == 6) {
+            $this->activateRecruits($loc_region);
+        }
+        if ($val == 9) {
+            self::incGameStateValue(GSV_TUNNEL_OPEN . $loc_region, 1);
+            //TODO: notify miner move, tunnel open
+        }
+        if ($val < 9) {
+            //TODO: notify miner move
+        }
+        $this->gamestate->nextState();
+    }
+
+    function stMarket()
+    {
+        $next_state = TX_NEXT;
+        self::setGameStateValue('active_player', $player_id);
+        $loc_id = self::getGameStateValue('active_loc');
+        $location = LOCATIONS[$loc_id];//TODO
+        $loc_name = $location['name'];
+
+        // Determine how many construction sites are filled
+        $market = substr($loc_name, 0, strlen(MARKETS[0])); //TODO: verify correct if changed to numbers, and sql below
+        $workers = array();
+        for ($i=0; $i<4; $i++) {
+            $sql = "SELECT worker_id FROM worker WHERE worker_loc = '${market}_${i}'";
+            $worker = self::getUniqueValueFromDb($sql);
+            if ($worker !== null) {
+                $workers[] = $worker;
+            }
+        }
+
+        // Numbers sites required for player count
+        $num_player = self::getPlayersNumber();
+        if ($num_player < 4) {
+            $sites_needed = 2;
+        } else if ($num_player == 4) {
+            $sites_needed = 3;
+        } else {
+            $sites_needed = 4;
+        }
+
+        if ($count($workers) == $sites_needed) {
+            // Market is complete, bump all players
+            foreach ($workers as $idx => $worker_id) {
+                $this->moveWorker($worker_id, BUMPED);
+            }
+
+            // Flip market
+            self::incGameStateValue(GSV_MARKET_BUILT . $market, 1);
+            //TODO: notify
+
+            // Place one star on market for each player
+            foreach ($players as $player_id) {
+                $this->addStar($player_id, $market);
+                //TODO: notify
+            }
+
+            // Handle bumps in next state
+            self::setGameStateValue('active_state', $this->gamestate->state_id());
+            $next_state = TX_BUMP;
+        } else if ($num_workers > $sites_needed) {
+            throw new feException("Impossible worker placement: too many workers at market?!");
+        }
+
+        $this->gamestate->nextState($next_state);
+    }
+
+    function stTrade()
+    {
+        $trade_id = self::getGameStateValue(GSV_TRADE);
+        $trade = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${trade_id}");
+        if ($trade === null) {
+            throw new feException("Impossible trade: no active trade '${trade_id}'");
+        }
+
+        if ($trade['trade_return'] === null) {
+            // First part of trade
+            $this->gamestate->changeActivePlayer($trade['player_two']);
+        } else {
+            // Second part of trade
+            $this->gamestate->changeActivePlayer($trade['player_one']);
+        }
+        $this->gamestate->nextState(TX_TRADE);
+    }
+
+    function stTradeCancel()
+    {
+        $trade_id = self::getGameStateValue(GSV_TRADE);
+        $trade = self::getObjectFromDB("SELECT * FROM trade WHERE trade_id = ${trade_id}");
+        if ($trade === null) {
+            throw new feException("Impossible trade: no active trade '${trade_id}'");
+        }
+
+        // Return play to player offering trade
+        $this->gamestate->changeActivePlayer($trade['player_one']);
+        $this->gamestate->nextState();
+    }
+
 
 
 //////////////////////////////////////////////////////////////////////////////
