@@ -1212,7 +1212,7 @@ class euphoria extends Table
             throw new feException("Illegal BUMP state: no worker to bump!");
         } else if (count($workers) > 1) {
             // Market construction
-            // Regroup workers by player as all need to be rolled at once
+            // Regroup workers by player to roll all at once
             $players = $this->loadPlayersBasicInfos();
             foreach($players as $player_id) {
                 $players['workers'] = array();
@@ -1221,7 +1221,8 @@ class euphoria extends Table
                 $players[$player_id]['workers'][] = $worker_id;
             }
         } else {
-            $players = $workers;
+            $pid = array_keys($workers)[0];
+            $players = array($pid => array($workers[$pid]));
         }
 
         $prev_state = self::getGameStateValue(GSV_PREV_ST);
@@ -1234,13 +1235,9 @@ class euphoria extends Table
         }
 
         $active_players = array();
-        foreach ($players as $player_id => $workers) {
+        foreach ($players as $player_id => $player) {
             //TODO: penalties/benefits
-            if (is_array($workers)) {
-                foreach ($workers as $idx => $worker_id) {
-                    $val = $this->activateWorker($worker_id);
-                }
-            } else {
+            foreach ($player['workers'] as $idx => $worker_id) {
                 $val = $this->activateWorker($worker_id);
             }
             $this->knowledgeCheck($player_id);
@@ -1366,7 +1363,6 @@ class euphoria extends Table
 
     function stMarket()
     {
-        //TODO: this is all broken from refactoring!
         $next_state = TX_NEXT;
         $loc_id = self::getGameStateValue(GSV_ST_LOC);
         $location = LOCATIONS[$loc_id];
@@ -1378,11 +1374,13 @@ class euphoria extends Table
         // Determine how many construction sites are filled
         $market = $location['market']
         $workers = array();
+        $players = array();
         foreach (CONS_BY_MARKET[$market] as $idx => $loc) {
-            $sql = "SELECT worker_id FROM worker WHERE worker_loc = ${loc}";
-            $worker = self::getUniqueValueFromDb($sql);
+            $sql = "SELECT worker_id wid, player_id pid FROM worker WHERE worker_loc = ${loc}";
+            $worker = self::getObjectFromDB($sql);
             if ($worker !== null) {
-                $workers[] = $worker;
+                $workers[] = $worker['wid'];
+                $players[] = $worker['pid'];
             }
         }
 
@@ -1396,7 +1394,7 @@ class euphoria extends Table
             $sites_needed = 4;
         }
 
-        if ($count($workers) == $sites_needed) {
+        if (count($workers) == $sites_needed) {
             // Market is complete, bump all players
             foreach ($workers as $idx => $worker_id) {
                 $this->moveWorker($worker_id, BUMPED);
@@ -1407,7 +1405,7 @@ class euphoria extends Table
             //TODO: notify
 
             // Place one star on market for each player
-            foreach ($players as $player_id) {
+            foreach (array_unique($players) as $idx => $player_id) {
                 $this->addStar($player_id, $market);
                 //TODO: notify
             }
@@ -1415,7 +1413,7 @@ class euphoria extends Table
             // Handle bumps in next state
             self::setGameStateValue(GSV_PREV_ST, $this->gamestate->state_id());
             $next_state = TX_BUMP;
-        } else if ($num_workers > $sites_needed) {
+        } else if (count($workers) > $sites_needed) {
             throw new feException("Impossible worker placement: too many workers at market?!");
         }
 
