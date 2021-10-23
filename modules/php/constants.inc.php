@@ -41,11 +41,15 @@ define("TX_TRADE", "tx_trade");
 define("TX_CANCEL", "tx_trade_canx");
 
 // Game labels
-define("GSV_MARKET_BUILT", "market_built_");
-define("GSV_TRACK_POS", "track_pos_");
-define("GSV_MINER_POS", "miner_pos_");
-define("GSV_TUNNEL_OPEN", "tunnel_end_");
-define("GSV_TRADE", "trade_counter");
+define("GSV_MARKET_BUILT", "gsv_market_built_");
+define("GSV_TRACK_POS", "gsv_track_pos_");
+define("GSV_MINER_POS", "gsv_miner_pos_");
+define("GSV_TUNNEL_OPEN", "gsv_tunnel_end_");
+define("GSV_TRADE", "gsv_trade_counter");
+define("GSV_ST_PLAYER", "gsv_st_player");
+define("GSV_ST_LOC", "gsv_st_loc");
+define("GSV_PREV_ST", "gsv_prev_state");
+define("GSV_HAS_DOUBLES", "gsv_doubles");
 
 // Game options
 define("OPT_MARKET_STARS", 100);
@@ -107,62 +111,67 @@ define("WASTELANDS", "region_wastelands");
 define("SUBTERRA", "region_subterra");
 
 // Board locations
-define("INACTIVE", "loc_inactive");
-define("ACTIVE", "loc_active");
-define("BUMPED", "loc_bump");
-define("WIND_SALOON", "loc_wind_saloon");
-define("NIMBUS_LOFT", "loc_nimbus_loft");
-define("BREEZE_BAR", "loc_breeze_bar");
-define("SKY_LOUNGE", "loc_sky_lounge");
-define("CLOUD_MINE", "loc_cloud_mine");
-define("INCINERATOR", "loc_incinerator");
-define("GENERATOR", "loc_generator");
-define("ARK", "loc_ark");
-define("FARM", "loc_farm");
-define("FREE_PRESS", "loc_free_press");
-define("AQUIFER", "loc_aquifer");
-define("EUPHORIA_TUNNEL", "loc_euph_tunnel");
-define("EUPHORIA_TUNNEL_END", "loc_euph_tunnel_end");
-define("WASTELANDS_TUNNEL", "loc_waste_tunnel");
-define("WASTELANDS_TUNNEL_END", "loc_waste_tunnel_end");
-define("SUBTERRA_TUNNEL", "loc_subt_tunnel");
-define("SUBTERRA_TUNNEL_END", "loc_subt_tunnel_end");
-define("ICARUS_TERRITORY", "loc_icariate_territory");
-define("EUPHORIA_TERRITORY", "loc_euph_territory");
-define("WASTELANDS_TERRITORY", "loc_waste_territory");
-define("SUBTERRA_TERRITORY", "loc_subt_territory");
-define("WORKER_TANK_ENERGY", "loc_worker_tank_e");
-define("WORKER_TANK_WATER", "loc_worker_tank_w");
-define("MARKET_E1", "loc_market_e1");
-define("MARKET_E1_0", "loc_market_e1_0");
-define("MARKET_E1_1", "loc_market_e1_1");
-define("MARKET_E1_2", "loc_market_e1_2");
-define("MARKET_E1_3", "loc_market_e1_3");
-define("MARKET_E2", "loc_market_e2");
-define("MARKET_E2_0", "loc_market_e2_0");
-define("MARKET_E2_1", "loc_market_e2_1");
-define("MARKET_E2_2", "loc_market_e2_2");
-define("MARKET_E2_3", "loc_market_e2_3");
-define("MARKET_W1", "loc_market_w1");
-define("MARKET_W1_0", "loc_market_w1_0");
-define("MARKET_W1_1", "loc_market_w1_1");
-define("MARKET_W1_2", "loc_market_w1_2");
-define("MARKET_W1_3", "loc_market_w1_3");
-define("MARKET_W2", "loc_market_w2");
-define("MARKET_W2_0", "loc_market_w2_0");
-define("MARKET_W2_1", "loc_market_w2_1");
-define("MARKET_W2_2", "loc_market_w2_2");
-define("MARKET_W2_3", "loc_market_w2_3");
-define("MARKET_S1", "loc_market_s1");
-define("MARKET_S1_0", "loc_market_s1_0");
-define("MARKET_S1_1", "loc_market_s1_1");
-define("MARKET_S1_2", "loc_market_s1_2");
-define("MARKET_S1_3", "loc_market_s1_3");
-define("MARKET_S2", "loc_market_s2");
-define("MARKET_S2_0", "loc_market_s2_0");
-define("MARKET_S2_1", "loc_market_s2_1");
-define("MARKET_S2_2", "loc_market_s2_2");
-define("MARKET_S2_3", "loc_market_s2_3");
+define("INACTIVE", 100);
+define("ACTIVE", 101);
+define("BUMPED", 102);
+// Icarus
+define("ICARUS_TERRITORY", 200);
+define("WIND_SALOON", 201);
+define("NIMBUS_LOFT", 202);
+define("BREEZE_BAR", 203);
+define("SKY_LOUNGE", 204);
+define("CLOUD_MINE", 205);
+// Euphoria
+define("EUPHORIA_TERRITORY", 300);
+define("INCINERATOR", 301);
+define("GENERATOR", 302);
+define("EUPHORIA_TUNNEL", 303);
+define("EUPHORIA_TUNNEL_END", 304);
+define("MARKET_E1", 310);
+define("MARKET_E1_0", 311);
+define("MARKET_E1_1", 312);
+define("MARKET_E1_2", 313);
+define("MARKET_E1_3", 314);
+define("MARKET_E2", 315);
+define("MARKET_E2_0", 316);
+define("MARKET_E2_1", 317);
+define("MARKET_E2_2", 318);
+define("MARKET_E2_3", 319);
+// Wastelands
+define("WASTELANDS_TERRITORY", 400);
+define("ARK", 401);
+define("FARM", 402);
+define("WASTELANDS_TUNNEL", 403);
+define("WASTELANDS_TUNNEL_END", 404);
+define("MARKET_W1", 410);
+define("MARKET_W1_0", 411);
+define("MARKET_W1_1", 412);
+define("MARKET_W1_2", 413);
+define("MARKET_W1_3", 414);
+define("MARKET_W2", 415);
+define("MARKET_W2_0", 416);
+define("MARKET_W2_1", 417);
+define("MARKET_W2_2", 418);
+define("MARKET_W2_3", 419);
+// Subterra
+define("SUBTERRA_TERRITORY", 500);
+define("FREE_PRESS", 501);
+define("AQUIFER", 502);
+define("SUBTERRA_TUNNEL", 503);
+define("SUBTERRA_TUNNEL_END", 504);
+define("MARKET_S1", 510);
+define("MARKET_S1_0", 511);
+define("MARKET_S1_1", 512);
+define("MARKET_S1_2", 513);
+define("MARKET_S1_3", 514);
+define("MARKET_S2", 515);
+define("MARKET_S2_0", 516);
+define("MARKET_S2_1", 517);
+define("MARKET_S2_2", 518);
+define("MARKET_S2_3", 519);
+// Other
+define("WORKER_TANK_ENERGY", 600);
+define("WORKER_TANK_WATER", 601);
 
 define("COMMODITY_AREAS", array(CLOUD_MINE, GENERATOR, FARM, AQUIFER));
 define("CON_SITES", array(
@@ -183,6 +192,14 @@ define("MARKETS_BY_REGION", array(
     WASTELANDS => array(MARKET_W1, MARKET_W2),
     SUBTERRA => array(MARKET_S1, MARKET_S2)
 ));
+define("CONS_BY_MARKET", array(
+    MARKET_E1 => array(MARKET_E1_0, MARKET_E1_1, MARKET_E1_2, MARKET_E1_3),
+    MARKET_E2 => array(MARKET_E2_0, MARKET_E2_1, MARKET_E2_2, MARKET_E2_3),
+    MARKET_W1 => array(MARKET_W1_0, MARKET_W1_1, MARKET_W1_2, MARKET_W1_3),
+    MARKET_W2 => array(MARKET_W2_0, MARKET_W2_1, MARKET_W2_2, MARKET_W2_3),
+    MARKET_S1 => array(MARKET_S1_0, MARKET_S1_1, MARKET_S1_2, MARKET_S1_3),
+    MARKET_S2 => array(MARKET_S2_0, MARKET_S2_1, MARKET_S2_2, MARKET_S2_3)
+));
 define("TERRITORIES", array(
     ICARUS => ICARUS_TERRITORY,
     EUPHORIA => EUPHORIA_TERRITORY,
@@ -194,26 +211,31 @@ define("TUNNEL_ENDS", array(EUPHORIA_TUNNEL_END, WASTELANDS_TUNNEL_END, SUBTERRA
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
+        'name' => self::_("Wind Saloon"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => ICARUS
     ),
     NIMBUS_LOFT => array(
+        'name' => self::_("Nimbus Loft"),
         'cost' => array(COMMODITY => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => ICARUS
     ),
     BREEZE_BAR => array(
+        'name' => self::_("Breeze Bar"),
         'cost' => array(RESOURCE => 1, BLISS => 1), //TODO: NOT 2x bliss
         'benefit' => array(INFLUENCE => 1, ARTIFACT => 2),
         'region' => ICARUS
     ),
     SKY_LOUNGE => array(
+        'name' => self::_("Sky Lounge"),
         'cost' => array(RESOURCE => 1, BLISS => 1), //TODO: NOT 2x bliss
         'benefit' => array(INFLUENCE => 1, RESOURCE => 2), //TODO: resource? commodity?
         'region' => ICARUS
     ),
     CLOUD_MINE => array(
+        'name' => self::_("Cloud Mine"),
         'cost' => NULL,
         'benefit' => array(
             array(BLISS => 1, INFLUENCE => 1),
@@ -223,11 +245,13 @@ define("LOCATIONS", array(
         'region' => ICARUS
     ),
     INCINERATOR => array(
+        'name' => self::_("Incinerator of Historical Accuracy"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     GENERATOR => array(
+        'name' => self::_("Generator"),
         'cost' => NULL,
         'benefit' => array(
             array(ENERGY => 1, INFLUENCE => 1),
@@ -237,11 +261,13 @@ define("LOCATIONS", array(
         'region' => EUPHORIA
     ),
     ARK => array(
+        'name' => self::_("Ark of Fractured Memories"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     FARM => array(
+        'name' => self::_("Farm"),
         'cost' => NULL,
         'benefit' => array(
             array(FOOD => 1, INFLUENCE => 1),
@@ -251,11 +277,13 @@ define("LOCATIONS", array(
         'region' => WASTELANDS
     ),
     FREE_PRESS => array(
+        'name' => self::_("Free Press of Harsh Reality"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     AQUIFER => array(
+        'name' => self::_("Aquifer"),
         'cost' => NULL,
         'benefit' => array(
             array(WATER => 1, INFLUENCE => 1),
@@ -265,213 +293,279 @@ define("LOCATIONS", array(
         'region' => SUBTERRA
     ),
     EUPHORIA_TUNNEL => array(
+        'name' => self::_("Euphorian Tunnel"),
         'cost' => array(ENERGY => 1),
         'benefit' => array(GOLD => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => EUPHORIA
     ),
     EUPHORIA_TUNNEL_END => array(
+        'name' => self::_("Euphorian Tunnel Exclusive"),
         'cost' => NULL,
         'benefit' => array(WATER => 3),
         'region' => EUPHORIA
     ),
     WASTELANDS_TUNNEL => array(
+        'name' => self::_("Wasterlander Tunnel"),
         'cost' => array(WATER => 1),
         'benefit' => array(CLAY => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => WASTELANDS
     ),
     WASTELANDS_TUNNEL_END => array(
+        'name' => self::_("Wasterlander Tunnel Exclusive"),
         'cost' => NULL
         'benefit' => array(ENERGY => 3),
         'region' => WASTELANDS
     ),
     SUBTERRA_TUNNEL => array(
+        'name' => self::_("Subterran Tunnel"),
         'cost' => array(WATER => 1),
         'benefit' => array(STONE => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => SUBTERRA
     ),
     SUBTERRA_TUNNEL_END => array(
+        'name' => self::_("Subterran Tunnel Exclusive"),
         'cost' => NULL,
         'benefit' => array(FOOD => 3),
         'region' => SUBTERRA
     ),
     ICARUS_TERRITORY => array(
+        'name' => self::_("Icarite Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => ICARUS
     ),
     EUPHORIA_TERRITORY => array(
+        'name' => self::_("Euphorian Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => EUPHRORIA
     ),
     WASTELANDS_TERRITORY => array(
+        'name' => self::_("Wastelander Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => WASTELANDS
     ),
     SUBTERRA_TERRITORY => array(
+        'name' => self::_("Suberran Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => SUBTERRA
     ),
     WORKER_TANK_E => array(
+        'name' => self::_("Worker Activation Tank"),
         'cost' => array(ENERGY => 3),
         'benefit' => array(KNOWLEDGE => -2, WORKER => 1),
         'region' => NULL
     ),
     WORKER_TANK_W => array(
+        'name' => self::_("Worker Activation Tank"),
         'cost' => array(WATER => 3),
         'benefit' => array(MORALE => 2, WORKER => 1),
         'region' => NULL
     ),
     MARKET_E1 => array(
+        'name' => self::_("Euphorian Market 1"),
         'cost' => NULL, // Depends on market (2 of: 4x resource, any resource, artifact (any/one), commodity (any/one))
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     MARKET_E1_1 => array(
+        'name' => self::_("Euphorian Market 1, Site 1"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_2 => array(
+        'name' => self::_("Euphorian Market 1, Site 2"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_3 => array(
+        'name' => self::_("Euphorian Market 1, Site 3"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_4 => array(
+        'name' => self::_("Euphorian Market 1, Site 4"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E2 => array(
+        'name' => self::_("Euphorian Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     MARKET_E2_1 => array(
+        'name' => self::_("Euphorian Market 2, Site 1"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_2 => array(
+        'name' => self::_("Euphorian Market 2, Site 2"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_3 => array(
+        'name' => self::_("Euphorian Market 2, Site 3"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_4 => array(
+        'name' => self::_("Euphorian Market 1, Site 4"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_W1 => array(
+        'name' => self::_("Wasterlander Market 1"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     MARKET_W1_1 => array(
+        'name' => self::_("Wasterlander Market 1, Site 1"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_2 => array(
+        'name' => self::_("Wasterlander Market 1, Site 2"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_3 => array(
+        'name' => self::_("Wasterlander Market 1, Site 3"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_4 => array(
+        'name' => self::_("Wasterlander Market 1, Site 4"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W2 => array(
+        'name' => self::_("Wasterlander Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     MARKET_W2_1 => array(
+        'name' => self::_("Wasterlander Market 2, Site 1"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_2 => array(
+        'name' => self::_("Wasterlander Market 2, Site 2"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_3 => array(
+        'name' => self::_("Wasterlander Market 2, Site 3"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_4 => array(
+        'name' => self::_("Wasterlander Market 2, Site 4"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_S1 => array(
+        'name' => self::_("Subterran Market 1"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     MARKET_S1_1 => array(
+        'name' => self::_("Subterran Market 1, Site 1"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
+        'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_2 => array(
+        'name' => self::_("Subterran Market 1, Site 2"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_3 => array(
+        'name' => self::_("Subterran Market 1, Site 3"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_4 => array(
+        'name' => self::_("Subterran Market 1, Site 4"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S2 => array(
+        'name' => self::_("Subterran Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     MARKET_S2_1 => array(
+        'name' => self::_("Subterran Market 2, Site 1"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
+        'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_2 => array(
+        'name' => self::_("Subterran Market 2, Site 2"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_3 => array(
+        'name' => self::_("Subterran Market 2, Site 3"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_4 => array(
+        'name' => self::_("Subterran Market 2, Site 4"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
+        'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
 ));

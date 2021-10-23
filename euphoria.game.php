@@ -64,12 +64,10 @@ class euphoria extends Table
             GSV_RECRUIT_SCORE . WASTELANDS => 32,
             GSV_RECRUIT_SCORE . ICARUS => 33,
             GSV_TRADE => 34,
-            'active_player' => 35,
-            'active_loc' => 36,
-            'active_state' => 37,
-            'keep_player' => 38,
-            'bump_player' => 39,
-            'bump_worker' => 40,
+            GSV_ST_PLAYER => 35,
+            GSV_ST_LOC => 36,
+            GSV_PREV_ST => 37,
+            GSV_HAS_DOUBLES => 38,
 
             'LAST_GLOBAL' => 89,
             //      ...
@@ -200,7 +198,7 @@ class euphoria extends Table
                 self::DbQuery($sql);
             }
             $sql = "INSERT INTO resource (player_id, resource_type, resource_count)";
-            $sql .= " VALUES (${player_id}, '" . MORALE . "', 1)";
+            $sql .= " VALUES (${player_id}, '". MORALE ."', 1)";
             self::DbQuery($sql);
             $sql = "INSERT INTO resource (player_id, resource_type, resource_count)";
             $sql .= " VALUES (${player_id}, '". KNOWLEDGE ."', 3)";
@@ -209,7 +207,7 @@ class euphoria extends Table
             // Init workers
             for ($i=0; $i<4; $i++) {
                 $sql = "INSERT INTO worker (player_id, worker_val, worker_loc)";
-                $sql .= " VALUES (${player_id}, 0, '". INACTIVE ."')";
+                $sql .= " VALUES (${player_id}, 0, ". INACTIVE .")";
                 self::DbQuery($sql);
             }
 
@@ -305,7 +303,7 @@ class euphoria extends Table
             throw new feException("Invalid inputs to moveWorker '${worker_id}, ${loc}, ${val}'");
         }
 
-        $sql = "UPDATE worker SET worker_loc = '". $loc ."'";
+        $sql = "UPDATE worker SET worker_loc = ${loc}";
         if ($val !== null) {
             $sql .= ", worker_val = ${val}";
         }
@@ -339,7 +337,7 @@ class euphoria extends Table
     {
         //TODO: check penalty
         $sql = "SELECT worker_id FROM worker WHERE player_id = ${player_id}"
-        $sql .= " AND worker_loc = '". INACTIVE ."' LIMIT 1";
+        $sql .= " AND worker_loc = ". INACTIVE ." LIMIT 1";
         $id = self::getUniqueValueFromDb($sql);
         if ($id === null) {
             return 0;
@@ -354,7 +352,7 @@ class euphoria extends Table
      */
     function knowledgeCheck($player_id)
     {
-        $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '" . ACTIVE . "'";
+        $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = ". ACTIVE;
         $sql .= " AND player_id = ${player_id}";
         $w = (int)self::getUniqueValueFromDb($sql);
         $k = $this->getResource($player_id, KNOWLEDGE);
@@ -532,8 +530,8 @@ class euphoria extends Table
                     $open_markets = 0;
                     foreach (MARKETS_BY_REGION[$region] as $market) {
                         if ($this->isSpaceOpen($market)) {
-                            $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
-                            $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
+                            $sql = "SELECT resource_count FROM resource WHERE resource_type = '". STAR ."'";
+                            $sql .= " AND player_id = ${player_id} AND resource_loc = ${market}";
                             $nbr = self::getUniqueValueFromDb($sql);
                             if ($nbr === null) {
                                 $open_markets += 1;
@@ -552,8 +550,8 @@ class euphoria extends Table
                         // Market is only choice
                         foreach (MARKETS_BY_REGION[$region] as $market) {
                             if ($this->isSpaceOpen($market)) {
-                                $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
-                                $sql .= " AND player_id = ${player_id} AND resource_loc = '${market}'";
+                                $sql = "SELECT resource_count FROM resource WHERE resource_type = '". STAR ."'";
+                                $sql .= " AND player_id = ${player_id} AND resource_loc = ${market}";
                                 $nbr = self::getUniqueValueFromDb($sql);
                                 if ($nbr === null) {
                                     $this->addStar($player_id, $market);
@@ -579,7 +577,7 @@ class euphoria extends Table
     {
         if (in_array($location, TERRITORIES)) {
             // Territory - check stars again playes
-            $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = '${location}'";
+            $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = ${location}";
             $nbr_filled = self::getUniqueValueFromDb($sql);
             $open = $nbr_filled < self::getPlayersNumber();
         } else if (in_array($location, MARKETS)) {
@@ -602,8 +600,8 @@ class euphoria extends Table
     function addStar($player_id, $loc)
     {
         // Get any stars already in place
-        $sql = "SELECT resource_count FROM resource WHERE resource_type = '" . STAR . "'";
-        $sql .= " AND player_id = ${player_id} AND resource_loc = '${loc}'";
+        $sql = "SELECT resource_count FROM resource WHERE resource_type = '". STAR ."'";
+        $sql .= " AND player_id = ${player_id} AND resource_loc = ${loc}";
         $nbr = self::getUniqueValueFromDb($sql);
 
         if ($nbr !== null) {
@@ -613,12 +611,12 @@ class euphoria extends Table
                 throw new feException("Impossible score: player '${player_id}' already has a star at '${loc}'");
             }
             $sql = "UPDATE resource SET resource_count = resource_count + 1 WHERE ";
-            $sql .= " resource_type = '" . STAR . "' AND player_id = ${player_id} ";
-            $sql .= " AND resource_loc = '${loc}'";
+            $sql .= " resource_type = '". STAR ."' AND player_id = ${player_id} ";
+            $sql .= " AND resource_loc = ${loc}";
         } else {
             // Add new star
             $sql = "INSERT INTO resource (player_id, resource_type, resource_count, resource_loc)";
-            $sql .= " VALUES (${player_id}, '". STAR ."', 1, '${loc}')";
+            $sql .= " VALUES (${player_id}, '". STAR ."', 1, ${loc})";
         }
         self::DbQuery($sql);
 
@@ -789,7 +787,7 @@ class euphoria extends Table
         $this->gamestate->setPlayerNonMultiactive($player_id);
     }
 
-    function actPlace($worker_id, $loc_name, $payment)
+    function actPlace($worker_id, $loc_id, $payment)
     {
         self::checkAction('actPlace'); 
         $player_id = self::getActivePlayerId();
@@ -802,19 +800,19 @@ class euphoria extends Table
         }
 
         // Verify location
-        if (!in_array($loc_name, LOCATIONS)) {
-            throw new feException("Impossible worker placement: invalid location '${loc_name}'");
+        if (!in_array($loc_id, LOCATIONS)) {
+            throw new feException("Impossible worker placement: invalid location '${loc_id}'");
         }
 
-        $location = LOCATIONS[$loc_name];
+        $location = LOCATIONS[$loc_id];
         $loc_cost = $location['cost'];
         $loc_benefit = $location['benefit'];
         $loc_region = $location['region'];
 
         // Verify location open (market, mine, etc.)
-        if (!$this->isSpaceOpen($loc_name, $loc_region)) {
+        if (!$this->isSpaceOpen($loc_id, $loc_region)) {
+            $loc_name = $location['name'];
             throw new BgaUserException(self::_("The ${loc_name} is not available to use"));
-            //TODO: translate loc_name to proper name
         }
 
         // Verify player paid any cost
@@ -845,17 +843,17 @@ class euphoria extends Table
         }
 
         // Move is valid, continue
-        self::setGameStateValue('active_player', $player_id);
-        self::setGameStateValue('active_loc', $loc_id);//TODO
-        self::setGameStateValue('active_state', $this->gamestate->state_id());
+        self::setGameStateValue(GSV_ST_PLAYER, $player_id);
+        self::setGameStateValue(GSV_ST_LOC, $loc_id);
+        self::setGameStateValue(GSV_PREV_ST, $this->gamestate->state_id());
         $next_state = TX_PLACE;
 
         // Bump
-        if (!in_array($loc_name, COMMODITY_AREAS)) { // no bump in commodities
-            $sql = "SELECT worker_id FROM worker WHERE worker_loc = '${loc_name}'";
+        if (!in_array($loc_id, COMMODITY_AREAS)) { // no bump in commodities
+            $sql = "SELECT worker_id FROM worker WHERE worker_loc = ${loc_id}";
             $worker_id = self::getUniqueValueFromDb($sql);
             if ($worker_id !== null) {
-                if (in_array($loc_name, CON_SITES)) {
+                if (in_array($loc_id, CON_SITES)) {
                     throw new BgaUserException(self::_("You cannot bump a worker from a construction site."));
                 }
 
@@ -865,7 +863,7 @@ class euphoria extends Table
         }
 
         // Move worker
-        $this->moveWorker($worker_id, $loc_name);
+        $this->moveWorker($worker_id, $loc_id);
         //TODO: notify
 
         $this->gamestate->nextState($next_state);
@@ -882,7 +880,7 @@ class euphoria extends Table
         }
         foreach ($worker_ids as $worker_id) {
             $sql = "SELECT count(1) FROM worker WHERE worker_id = ${worker_id} AND ";
-            $sql .="worker_loc != '" . ACTIVE ."' AND worker_loc != '" . INACTIVE . "' AND ";
+            $sql .= "worker_loc != ". ACTIVE ." AND worker_loc != ". INACTIVE ." AND ";
             $sql .= "player_id = ${player_id}";
             if ((int)self::getUniqueValueFromDb($sql) !== 1) {
                 throw new feException("Impossible retrieve: bad worker '${worker_id}'");
@@ -1207,7 +1205,7 @@ class euphoria extends Table
 
     function stBump()
     {
-        $sql = "SELECT player_id, worker_id FROM worker WHERE worker_loc = '" . BUMPED . "'";
+        $sql = "SELECT player_id, worker_id FROM worker WHERE worker_loc = ". BUMPED;
         $workers = self::getCollectionFromDB($sql, true);
         if (count($workers) == 0) {
             //TODO: _can_ we get here?
@@ -1226,7 +1224,7 @@ class euphoria extends Table
             $players = $workers;
         }
 
-        $prev_state = self::getGameStateValue('active_state');
+        $prev_state = self::getGameStateValue(GSV_PREV_ST);
         if ($prev_state == ST_PLACE) {
             $next_state = "place";
         } else if ($prev_state == ST_MARKET) {
@@ -1256,11 +1254,10 @@ class euphoria extends Table
         $this->gamestate->setPlayersMultiactive($active_players, $next_state, true);
     }
 
-    //TODO: all these transitions need to be worked out in states...incomplte code
     function stPlace()
     {
-        $player_id = self::getGameStateValue('active_player');
-        $loc_id = self::getGameStateValue('active_loc');
+        $player_id = self::getGameStateValue(GSV_ST_PLAYER);
+        $loc_id = self::getGameStateValue(GSV_ST_LOC);
         $location = LOCATIONS[$loc_id];
         $loc_cost = $location['cost'];
         $loc_benefit = $location['benefit'];
@@ -1273,7 +1270,6 @@ class euphoria extends Table
         if (count($payment) > 0) {
             self::DbQuery("DELETE FROM resource WHERE player_id = 0");
         }
-
 
         // Verify payment still available
         $can_pay = true;
@@ -1308,9 +1304,9 @@ class euphoria extends Table
         }
 
         // Gain benefit
-        if (in_array($loc_name, COMMODITIY_AREAS)) {
+        if (in_array($loc_id, COMMODITIY_AREAS)) {
             // Commodity benefit depends on total knowledge of workers at location
-            $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = '${loc_name}'";
+            $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = ${loc_id}";
             $val = self::getUniqueValueFromDb($sql);
             if ($val < 5) {
                 $idx = 0;
@@ -1319,26 +1315,26 @@ class euphoria extends Table
             } else {
                 $idx = 2;
             }
-            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_name, $loc_region);
+            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_id, $loc_region);
             //TODO: aleg benefit
-        } else if (in_array($loc_name, TUNNELS)) {
-            if ($this->hasLocationBenefit($loc_name, $player_id)) {//TODO
-                $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
+        } else if (in_array($loc_id, TUNNELS)) {
+            if ($this->hasLocationBenefit($loc_id, $player_id)) {//TODO
+                $this->gainBenefits($player_id, $loc_benefit, $loc_id, $loc_region);
             } else {
                 // player must choose...how?
                 //TODO; separate action
                 //OR force it to come in with move, yes? Easy, but many Recruits will require choice...
             }
         } else if ($loc_benefit !== null) {
-            $this->gainBenefits($player_id, $loc_benefit, $loc_name, $loc_region);
+            $this->gainBenefits($player_id, $loc_benefit, $loc_id, $loc_region);
         }
         //TODO: notify
 
 
         // Possible additional actions
-        if (in_array(TUNNELS, $loc_name)) {
+        if (in_array($loc_id, TUNNELS)) {
             $this->gamestate->nextState(TX_MINE);
-        } else if (in_array($loc_name, CON_SITES)) {
+        } else if (in_array($loc_id, CON_SITES)) {
             $this->gamestate->nextState(TX_MARKET);
         } else {
             //TODO: active player?
@@ -1350,8 +1346,8 @@ class euphoria extends Table
 
     function stMine()
     {
-        $loc_id = self::getGameStateValue('active_loc');
-        $location = LOCATIONS[$loc_id];//TODO
+        $loc_id = self::getGameStateValue(GSV_ST_LOC);
+        $location = LOCATIONS[$loc_id];
         $loc_region = $location['region'];
 
         $val = self::incGameStateValue(GSV_MINER_POS . $loc_region, 1);
@@ -1370,17 +1366,20 @@ class euphoria extends Table
 
     function stMarket()
     {
+        //TODO: this is all broken from refactoring!
         $next_state = TX_NEXT;
-        self::setGameStateValue('active_player', $player_id);
-        $loc_id = self::getGameStateValue('active_loc');
-        $location = LOCATIONS[$loc_id];//TODO
-        $loc_name = $location['name'];
+        $loc_id = self::getGameStateValue(GSV_ST_LOC);
+        $location = LOCATIONS[$loc_id];
+
+        if (!in_array($loc_id, CON_SITES)) {
+            throw new feException("Impossible market state: invalid location '${loc_id}'");
+        }
 
         // Determine how many construction sites are filled
-        $market = substr($loc_name, 0, strlen(MARKETS[0])); //TODO: verify correct if changed to numbers, and sql below
+        $market = $location['market']
         $workers = array();
-        for ($i=0; $i<4; $i++) {
-            $sql = "SELECT worker_id FROM worker WHERE worker_loc = '${market}_${i}'";
+        foreach (CONS_BY_MARKET[$market] as $idx => $loc) {
+            $sql = "SELECT worker_id FROM worker WHERE worker_loc = ${loc}";
             $worker = self::getUniqueValueFromDb($sql);
             if ($worker !== null) {
                 $workers[] = $worker;
@@ -1414,7 +1413,7 @@ class euphoria extends Table
             }
 
             // Handle bumps in next state
-            self::setGameStateValue('active_state', $this->gamestate->state_id());
+            self::setGameStateValue(GSV_PREV_ST, $this->gamestate->state_id());
             $next_state = TX_BUMP;
         } else if ($num_workers > $sites_needed) {
             throw new feException("Impossible worker placement: too many workers at market?!");

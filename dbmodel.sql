@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `resource` (
   `player_id` int unsigned NOT NULL,
   `resource_type` varchar(16) NOT NULL,
   `resource_count` int unsigned NOT NULL,
-  `resource_loc` varchar(16),
+  `resource_loc` int unsigned DEFAULT 0,
   PRIMARY KEY (`player_id`,`resource_type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 ALTER TABLE resource ADD CONSTRAINT fk_player_id FOREIGN KEY (player_id) REFERENCES player(player_id);
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `worker` (
   `worker_id` int unsigned NOT NULL AUTO_INCREMENT,
   `player_id` int unsigned NOT NULL,
   `worker_val` int unsigned NOT NULL,
-  `worker_loc` varchar(16) unsigned NOT NULL,
+  `worker_loc` int unsigned DEFAULT 0,
   `double_turn` bool DEFAULT 0,
   PRIMARY KEY (`worker_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
