@@ -87,7 +87,15 @@ define("BOX", "type_box");
 define("GLASSES", "type_glasses");
 
 define("ARTIFACT", "type_artifact");
-define("ARTIFACTS", array(BALLON, BAT, BEAR, BOOK, BOX, GLASSES));
+define("ARTIFACTS", array(BALLOON, BAT, BEAR, BOOK, BOX, GLASSES));
+define("ARTIFACT_I18N", array(
+    self::_("Balloon"),
+    self::_("Bat"),
+    self::_("Bear"),
+    self::_("Book"),
+    self::_("Box"),
+    self::_("Glasses")
+));
 
 // Cards
 define("RECRUIT", "type_recruit");

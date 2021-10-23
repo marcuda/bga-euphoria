@@ -63,6 +63,7 @@ class euphoria extends Table
             GSV_RECRUIT_SCORE . SUBTERRA => 31,
             GSV_RECRUIT_SCORE . WASTELANDS => 32,
             GSV_RECRUIT_SCORE . ICARUS => 33,
+            // State variables
             GSV_TRADE => 34,
             GSV_ST_PLAYER => 35,
             GSV_ST_LOC => 36,
@@ -154,14 +155,14 @@ class euphoria extends Table
                 'nbr' => 1
             );
         }
-        foreach (DILEMMAS as $idx => $card) {
+         */
+        for ($i=0; $i<count(ARTIFACTS); $i++) {
             $cards[] array(
                 'type' = DILEMMA,
-                'type_arg' = $idx,
+                'type_arg' = $i,
                 'nbr' => 1
             );
         }
-         */
         $this->cards->createCards($cards);
 
         // Separate and shuffle card decks
@@ -969,7 +970,8 @@ class euphoria extends Table
 
         if (count($card_ids) == 1) {
             if (!$this->verifyCard($card_ids[0], $cost, CARD_HAND, $player_id)) {
-                throw new BgaUserException(self::_("You must play a ${cost} this dilemma"));
+                $type = ARTIFACT_I18N[$card['type_arg']];
+                throw new BgaUserException(self::_("You must play a ${type} Artifact for this dilemma"));
             }
         }
         //TODO: stop players from being stupid? (play two including the one needed)
