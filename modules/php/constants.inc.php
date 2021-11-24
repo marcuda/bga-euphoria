@@ -89,12 +89,12 @@ define("GLASSES", "type_glasses");
 define("ARTIFACT", "type_artifact");
 define("ARTIFACTS", array(BALLOON, BAT, BEAR, BOOK, BOX, GLASSES));
 define("ARTIFACT_I18N", array(
-    self::_("Balloon"),
-    self::_("Bat"),
-    self::_("Bear"),
-    self::_("Book"),
-    self::_("Box"),
-    self::_("Glasses")
+    clienttranslate("Balloon"),
+    clienttranslate("Bat"),
+    clienttranslate("Bear"),
+    clienttranslate("Book"),
+    clienttranslate("Box"),
+    clienttranslate("Glasses")
 ));
 
 // Cards
@@ -219,31 +219,31 @@ define("TUNNEL_ENDS", array(EUPHORIA_TUNNEL_END, WASTELANDS_TUNNEL_END, SUBTERRA
 
 define("LOCATIONS", array(
     WIND_SALOON => array(
-        'name' => self::_("Wind Saloon"),
+        'name' => clienttranslate("Wind Saloon"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => ICARUS
     ),
     NIMBUS_LOFT => array(
-        'name' => self::_("Nimbus Loft"),
+        'name' => clienttranslate("Nimbus Loft"),
         'cost' => array(COMMODITY => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => ICARUS
     ),
     BREEZE_BAR => array(
-        'name' => self::_("Breeze Bar"),
+        'name' => clienttranslate("Breeze Bar"),
         'cost' => array(RESOURCE => 1, BLISS => 1), //TODO: NOT 2x bliss
         'benefit' => array(INFLUENCE => 1, ARTIFACT => 2),
         'region' => ICARUS
     ),
     SKY_LOUNGE => array(
-        'name' => self::_("Sky Lounge"),
+        'name' => clienttranslate("Sky Lounge"),
         'cost' => array(RESOURCE => 1, BLISS => 1), //TODO: NOT 2x bliss
         'benefit' => array(INFLUENCE => 1, RESOURCE => 2), //TODO: resource? commodity?
         'region' => ICARUS
     ),
     CLOUD_MINE => array(
-        'name' => self::_("Cloud Mine"),
+        'name' => clienttranslate("Cloud Mine"),
         'cost' => NULL,
         'benefit' => array(
             array(BLISS => 1, INFLUENCE => 1),
@@ -253,13 +253,13 @@ define("LOCATIONS", array(
         'region' => ICARUS
     ),
     INCINERATOR => array(
-        'name' => self::_("Incinerator of Historical Accuracy"),
+        'name' => clienttranslate("Incinerator of Historical Accuracy"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     GENERATOR => array(
-        'name' => self::_("Generator"),
+        'name' => clienttranslate("Generator"),
         'cost' => NULL,
         'benefit' => array(
             array(ENERGY => 1, INFLUENCE => 1),
@@ -269,13 +269,13 @@ define("LOCATIONS", array(
         'region' => EUPHORIA
     ),
     ARK => array(
-        'name' => self::_("Ark of Fractured Memories"),
+        'name' => clienttranslate("Ark of Fractured Memories"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     FARM => array(
-        'name' => self::_("Farm"),
+        'name' => clienttranslate("Farm"),
         'cost' => NULL,
         'benefit' => array(
             array(FOOD => 1, INFLUENCE => 1),
@@ -285,13 +285,13 @@ define("LOCATIONS", array(
         'region' => WASTELANDS
     ),
     FREE_PRESS => array(
-        'name' => self::_("Free Press of Harsh Reality"),
+        'name' => clienttranslate("Free Press of Harsh Reality"),
         'cost' => array(ARTIFACT => 3),
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     AQUIFER => array(
-        'name' => self::_("Aquifer"),
+        'name' => clienttranslate("Aquifer"),
         'cost' => NULL,
         'benefit' => array(
             array(WATER => 1, INFLUENCE => 1),
@@ -301,276 +301,276 @@ define("LOCATIONS", array(
         'region' => SUBTERRA
     ),
     EUPHORIA_TUNNEL => array(
-        'name' => self::_("Euphorian Tunnel"),
+        'name' => clienttranslate("Euphorian Tunnel"),
         'cost' => array(ENERGY => 1),
         'benefit' => array(GOLD => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => EUPHORIA
     ),
     EUPHORIA_TUNNEL_END => array(
-        'name' => self::_("Euphorian Tunnel Exclusive"),
+        'name' => clienttranslate("Euphorian Tunnel Exclusive"),
         'cost' => NULL,
         'benefit' => array(WATER => 3),
         'region' => EUPHORIA
     ),
     WASTELANDS_TUNNEL => array(
-        'name' => self::_("Wasterlander Tunnel"),
+        'name' => clienttranslate("Wasterlander Tunnel"),
         'cost' => array(WATER => 1),
         'benefit' => array(CLAY => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => WASTELANDS
     ),
     WASTELANDS_TUNNEL_END => array(
-        'name' => self::_("Wasterlander Tunnel Exclusive"),
+        'name' => clienttranslate("Wasterlander Tunnel Exclusive"),
         'cost' => NULL
         'benefit' => array(ENERGY => 3),
         'region' => WASTELANDS
     ),
     SUBTERRA_TUNNEL => array(
-        'name' => self::_("Subterran Tunnel"),
+        'name' => clienttranslate("Subterran Tunnel"),
         'cost' => array(WATER => 1),
         'benefit' => array(STONE => 1, ARTIFACT => 1), //TODO: choose 1
         'region' => SUBTERRA
     ),
     SUBTERRA_TUNNEL_END => array(
-        'name' => self::_("Subterran Tunnel Exclusive"),
+        'name' => clienttranslate("Subterran Tunnel Exclusive"),
         'cost' => NULL,
         'benefit' => array(FOOD => 3),
         'region' => SUBTERRA
     ),
     ICARUS_TERRITORY => array(
-        'name' => self::_("Icarite Territory"),
+        'name' => clienttranslate("Icarite Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => ICARUS
     ),
     EUPHORIA_TERRITORY => array(
-        'name' => self::_("Euphorian Territory"),
+        'name' => clienttranslate("Euphorian Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => EUPHRORIA
     ),
     WASTELANDS_TERRITORY => array(
-        'name' => self::_("Wastelander Territory"),
+        'name' => clienttranslate("Wastelander Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => WASTELANDS
     ),
     SUBTERRA_TERRITORY => array(
-        'name' => self::_("Suberran Territory"),
+        'name' => clienttranslate("Suberran Territory"),
         'cost' => NULL,
         'benefit' => NULL,
         'region' => SUBTERRA
     ),
     WORKER_TANK_E => array(
-        'name' => self::_("Worker Activation Tank"),
+        'name' => clienttranslate("Worker Activation Tank"),
         'cost' => array(ENERGY => 3),
         'benefit' => array(KNOWLEDGE => -2, WORKER => 1),
         'region' => NULL
     ),
     WORKER_TANK_W => array(
-        'name' => self::_("Worker Activation Tank"),
+        'name' => clienttranslate("Worker Activation Tank"),
         'cost' => array(WATER => 3),
         'benefit' => array(MORALE => 2, WORKER => 1),
         'region' => NULL
     ),
     MARKET_E1 => array(
-        'name' => self::_("Euphorian Market 1"),
+        'name' => clienttranslate("Euphorian Market 1"),
         'cost' => NULL, // Depends on market (2 of: 4x resource, any resource, artifact (any/one), commodity (any/one))
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     MARKET_E1_1 => array(
-        'name' => self::_("Euphorian Market 1, Site 1"),
+        'name' => clienttranslate("Euphorian Market 1, Site 1"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_2 => array(
-        'name' => self::_("Euphorian Market 1, Site 2"),
+        'name' => clienttranslate("Euphorian Market 1, Site 2"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_3 => array(
-        'name' => self::_("Euphorian Market 1, Site 3"),
+        'name' => clienttranslate("Euphorian Market 1, Site 3"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E1_4 => array(
-        'name' => self::_("Euphorian Market 1, Site 4"),
+        'name' => clienttranslate("Euphorian Market 1, Site 4"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E1,
         'region' => EUPHORIA
     ),
     MARKET_E2 => array(
-        'name' => self::_("Euphorian Market 2"),
+        'name' => clienttranslate("Euphorian Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => EUPHORIA
     ),
     MARKET_E2_1 => array(
-        'name' => self::_("Euphorian Market 2, Site 1"),
+        'name' => clienttranslate("Euphorian Market 2, Site 1"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_2 => array(
-        'name' => self::_("Euphorian Market 2, Site 2"),
+        'name' => clienttranslate("Euphorian Market 2, Site 2"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_3 => array(
-        'name' => self::_("Euphorian Market 2, Site 3"),
+        'name' => clienttranslate("Euphorian Market 2, Site 3"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_E2_4 => array(
-        'name' => self::_("Euphorian Market 1, Site 4"),
+        'name' => clienttranslate("Euphorian Market 1, Site 4"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_E2,
         'region' => EUPHORIA
     ),
     MARKET_W1 => array(
-        'name' => self::_("Wasterlander Market 1"),
+        'name' => clienttranslate("Wasterlander Market 1"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     MARKET_W1_1 => array(
-        'name' => self::_("Wasterlander Market 1, Site 1"),
+        'name' => clienttranslate("Wasterlander Market 1, Site 1"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_2 => array(
-        'name' => self::_("Wasterlander Market 1, Site 2"),
+        'name' => clienttranslate("Wasterlander Market 1, Site 2"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_3 => array(
-        'name' => self::_("Wasterlander Market 1, Site 3"),
+        'name' => clienttranslate("Wasterlander Market 1, Site 3"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W1_4 => array(
-        'name' => self::_("Wasterlander Market 1, Site 4"),
+        'name' => clienttranslate("Wasterlander Market 1, Site 4"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W1,
         'region' => WASTELANDS
     ),
     MARKET_W2 => array(
-        'name' => self::_("Wasterlander Market 2"),
+        'name' => clienttranslate("Wasterlander Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => WASTELANDS
     ),
     MARKET_W2_1 => array(
-        'name' => self::_("Wasterlander Market 2, Site 1"),
+        'name' => clienttranslate("Wasterlander Market 2, Site 1"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_2 => array(
-        'name' => self::_("Wasterlander Market 2, Site 2"),
+        'name' => clienttranslate("Wasterlander Market 2, Site 2"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_3 => array(
-        'name' => self::_("Wasterlander Market 2, Site 3"),
+        'name' => clienttranslate("Wasterlander Market 2, Site 3"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_W2_4 => array(
-        'name' => self::_("Wasterlander Market 2, Site 4"),
+        'name' => clienttranslate("Wasterlander Market 2, Site 4"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_W2,
         'region' => WASTELANDS
     ),
     MARKET_S1 => array(
-        'name' => self::_("Subterran Market 1"),
+        'name' => clienttranslate("Subterran Market 1"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     MARKET_S1_1 => array(
-        'name' => self::_("Subterran Market 1, Site 1"),
+        'name' => clienttranslate("Subterran Market 1, Site 1"),
         'cost' => array(GOLD => 1),
         'benefit' => NULL,
         'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_2 => array(
-        'name' => self::_("Subterran Market 1, Site 2"),
+        'name' => clienttranslate("Subterran Market 1, Site 2"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_3 => array(
-        'name' => self::_("Subterran Market 1, Site 3"),
+        'name' => clienttranslate("Subterran Market 1, Site 3"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S1_4 => array(
-        'name' => self::_("Subterran Market 1, Site 4"),
+        'name' => clienttranslate("Subterran Market 1, Site 4"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S1,
         'region' => SUBTERRA
     ),
     MARKET_S2 => array(
-        'name' => self::_("Subterran Market 2"),
+        'name' => clienttranslate("Subterran Market 2"),
         'cost' => NULL, // Depends on market
         'benefit' => array(STAR => 1, INFLUENCE => 1),
         'region' => SUBTERRA
     ),
     MARKET_S2_1 => array(
-        'name' => self::_("Subterran Market 2, Site 1"),
+        'name' => clienttranslate("Subterran Market 2, Site 1"),
         'cost' => array(CLAY => 1),
         'benefit' => NULL,
         'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_2 => array(
-        'name' => self::_("Subterran Market 2, Site 2"),
+        'name' => clienttranslate("Subterran Market 2, Site 2"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_3 => array(
-        'name' => self::_("Subterran Market 2, Site 3"),
+        'name' => clienttranslate("Subterran Market 2, Site 3"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S2,
         'region' => SUBTERRA
     ),
     MARKET_S2_4 => array(
-        'name' => self::_("Subterran Market 2, Site 4"),
+        'name' => clienttranslate("Subterran Market 2, Site 4"),
         'cost' => array(STONE => 1),
         'benefit' => NULL,
         'market' => MARKET_S2,

@@ -355,18 +355,29 @@ class euphoria extends Table
     {
         $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = ". ACTIVE;
         $sql .= " AND player_id = ${player_id}";
-        $w = (int)self::getUniqueValueFromDb($sql);
-        $k = $this->getResource($player_id, KNOWLEDGE);
+        $val = (int)self::getUniqueValueFromDb($sql);
+        $val += $this->getResource($player_id, KNOWLEDGE);
 
-        if ($w + $k >= 16) {
+        if ($val >= 16) {
             // Lose 1 worker
             $sql = "SELECT worker_id FROM worker WHERE player_id = ${player_id}";
             $sql .= " ORDER BY worker_val DESC LIMIT 1";
-            $id = self::getUniqueValuefromDb($sql);
+            $worker_id = self::getUniqueValuefromDb($sql);
 
-            $this->moveWorker($id, INACTIVE);
-            //TODO notify
+            $this->moveWorker($worker_id, INACTIVE);
+            $msg = clienttranslate('${player_name} knowledge check: ${value}, one worker is lost!');
+        } else {
+            $msg = clienttranslate('${player_name} knowledge check: ${value}');
+            $worker_id = null;
         }
+
+
+        self::notifyAllPlayers('knowledgeCheck', $msg, array(
+            'player_name' => self::getPlayerNameById($player_id),
+            'player_id' => $player_id,
+            'worker_id' => $worker_id,
+            'value' => $val,
+        ));
     }
 
     /*
@@ -808,11 +819,11 @@ class euphoria extends Table
         $location = LOCATIONS[$loc_id];
         $loc_cost = $location['cost'];
         $loc_benefit = $location['benefit'];
+        $loc_name = $location['name'];
         $loc_region = $location['region'];
 
         // Verify location open (market, mine, etc.)
         if (!$this->isSpaceOpen($loc_id, $loc_region)) {
-            $loc_name = $location['name'];
             throw new BgaUserException(self::_("The ${loc_name} is not available to use"));
         }
 
@@ -865,7 +876,16 @@ class euphoria extends Table
 
         // Move worker
         $this->moveWorker($worker_id, $loc_id);
-        //TODO: notify
+
+        $msg = clienttranslate('${player_name} places a worker at ${location}');
+        self::notifyAllPlayers('placeWorker', $msg, array(
+            'i18n' => array('location'),
+            'player_id' => $player_id,
+            'player_name' => self::getActivePlayerName(),
+            'location' => $loc_name,
+            'loc_id' => $loc_id,
+            'worker_id' => $worker_id,
+        ));
 
         $this->gamestate->nextState($next_state);
     }
@@ -879,7 +899,7 @@ class euphoria extends Table
         if (count($worker_ids) == 0) {
             throw new feException("Impossible retrieve: no workers given");
         }
-        foreach ($worker_ids as $worker_id) {
+        foreach ($worker_ids as $idx => $worker_id) {
             $sql = "SELECT count(1) FROM worker WHERE worker_id = ${worker_id} AND ";
             $sql .= "worker_loc != ". ACTIVE ." AND worker_loc != ". INACTIVE ." AND ";
             $sql .= "player_id = ${player_id}";
@@ -914,6 +934,8 @@ class euphoria extends Table
         if ($payment !== null) {
             $this->incResource($player_id, $payment, -1);
             $this->incResourceBounded($player_id, MORALE, 2);
+
+            $msg = clienttranslate('${player_name} retrieves ${number} worker(s) with ${payment}');
         } else {
             $this->incResourceBounded($player_id, MORALE, -1);
 
@@ -924,16 +946,31 @@ class euphoria extends Table
                     throw new BgaUserException(self::_("You must discard a card due to lost morale"));
                 }
                 $this->cards->playCard($discard_id);
+
+                $payment = ARTIFACT;
+                $msg = clienttranslate('${player_name} retrieves ${number} worker(s) for free and discards ${payment}');
+            } else {
+                $msg = clienttranslate('${player_name} retrieves ${number} worker(s) for free');
             }
         }
 
         // Roll and move worker(s)
-        foreach ($worker_ids as $worker_id) {
+        $values = array()
+        foreach ($worker_ids as $idx => $worker_id) {
             $val = $this->activateWorker($worker_id);
-            self::DbQuery($sql);
+            $values[] = $val;
             //TODO: penalty
         }
-        //TODO: notify
+
+        self::notifyAllPlayers('retrieveWorkers', $msg, array(
+            'player_id' => $player_id,
+            'player_name' => self::getActivePlayerName(),
+            'number' => count($workers),
+            'payment' => $payment,
+            'worker_ids' => $worker_ids,
+            'worker_vals' => $values,
+        ));
+
         $this->knowledgeCheck($player_id);
     }
 
