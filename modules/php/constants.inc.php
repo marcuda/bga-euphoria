@@ -117,6 +117,12 @@ define("ICARUS", "region_icarus");
 define("EUPHORIA", "region_euphoria");
 define("WASTELANDS", "region_wastelands");
 define("SUBTERRA", "region_subterra");
+define("REGIONS", array(
+    ICARUS => clienttranslate('Icarus')
+    EUPHORIA => clienttranslate('Euphoria')
+    WASTELANDS => clienttranslate('Wastelands')
+    SUBTERRA => clienttranslate('Subterra')
+));
 
 // Board locations
 define("INACTIVE", 100);

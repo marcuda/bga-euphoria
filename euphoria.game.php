@@ -451,13 +451,38 @@ class euphoria extends Table
         //TODO: from cardId get card then match to specific recruit object
     }
 
+    /*
+     * Activate all hidden recruits from given region
+     */
     function activateRecruits($region)
     {
-        //TODO
-        //check if already active
-        //if not flip cards
-        //set global
-        //notify
+        if (self::getGameStateValue(GSV_RECRUIT_ACTIVE . $region) != 0) {
+            // Already active
+            return;
+        }
+
+        // Set active
+        self::incGameStatevalue(GSV_RECRUIT_ACTIVE . $region);
+        $msg = clienttranslate('All recruits from ${region} are activated');
+        self::notifyAllPlayers('log', $msg, array('region' => REGIONS[$region]));
+
+        // Check all hidden recruits for region
+        $cards = $this->getCardsInLocation(CARD_HIDDEN);
+        foreach ($cards as $card_id => $card) {
+            if ($this->getRecruitInfo($card_id)['region'] == $region) {
+                // This region, activate it
+                $this->cards->moveCard($card_id, CARD_IN_PLAY, $card['location_arg']);
+
+                // notify (TODO: all at once? is it even necessary?)
+                $msg = clienttranslate('${player_name} activates ${card}');
+                self::notifyAllPlayers('activateRecruit', $msg, array(
+                    'player_name' => self::getPlayerNameById($player_id),
+                    'card' => $this->getRecruitInfo($card_id)['name'],
+                    'card_id' => $card_id // for UI to flip card
+                ));
+
+            }
+        }
     }
 
     /*
