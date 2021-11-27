@@ -464,7 +464,10 @@ class euphoria extends Table
         // Set active
         self::incGameStatevalue(GSV_RECRUIT_ACTIVE . $region);
         $msg = clienttranslate('All recruits from ${region} are activated');
-        self::notifyAllPlayers('log', $msg, array('region' => REGIONS[$region]));
+        self::notifyAllPlayers('log', $msg, array(
+            'i18n' => array('region'),
+            'region' => REGIONS[$region]
+        ));
 
         // Check all hidden recruits for region
         $cards = $this->getCardsInLocation(CARD_HIDDEN);
@@ -660,6 +663,16 @@ class euphoria extends Table
         // Score star
         $sql = "UPDATE player SET player_score = player_score + 1 WHERE player_id = ${player_id}";
         self::DbQuery($sql);
+
+        // Notify
+        $msg = clienttranslate('${player_name} gains a star on ${location}');
+        self::notifyAllPlayers('gainStar', $msg, array(
+            'i18n' => array('location'),
+            'player_id' => $player_id,
+            'player_name' => self::getActivePlayerName(),
+            'location' => LOCATIONS[$loc]['name'],
+            'loc_id' => $loc
+        ));
     }
 
     /*
@@ -803,6 +816,8 @@ class euphoria extends Table
                 // Discard remainder
                 $this->cards->playCard($card_id);
             }
+
+            $this->gamestate->setPlayerNonMultiactive($player_id);
         } else {
             // Add new recruit (active) and discard other (hidden)
             // Check if new recruit is already active or scored
@@ -814,15 +829,33 @@ class euphoria extends Table
                     // New recruit already scored
                     $this->addStar($player_id, $active_id);
                 }
+
+                // notif
+                $msg = clienttranslate('${player_name} recruits ${card_name}');
+                $card_id = $active_id;
+                $card_name = $this->getRecruitInfo($card_id)['name'];
             } else {
                 // Recruit not yet revealed
                 $this->cards->moveCard($active_id, CARD_HIDDEN, $player_id);
+
+                // notif (hide private info)
+                $msg = clienttranslate('${player_name} recruits a hidden recruit');
+                $card_id = null;
+                $card_name = '';
             }
             $this->cards->playCard($hidden_id);
-        }
 
-        $this->gamestate->setPlayerNonMultiactive($player_id);
+            self::notifyAllPlayers('draftRecruit', $msg, array(
+                'player_name' => self::getCurrentPlayerName(),
+                'player_id' => $player_id,
+                'card_name' => $card_name,
+                'card_id' => $card_id
+            ));
+
+            $this->gamestate->nextState(); // only one player active for this action
+        }
     }
+
 
     function actPlace($worker_id, $loc_id, $payment)
     {
@@ -1044,16 +1077,29 @@ class euphoria extends Table
         }
         $this->cards->moveCard($dilemma_id, CARD_IN_PLAY, $player_id);
 
+        $msg = clienttranslate('${player_name} considers their ethical dilemma and chooses to ${action}');
+        self::notifyAllPlayers('dilemma', $msg, array(
+            'i18n' => array('action'),
+            'player_id' => $player_id,
+            'player_name' => self::getActivePlayerName(),
+            'action' => $this->getDilemmaInfo()[$side], //TODO
+            'dilemma_id' => $dilemma_id,
+            'card_ids' => $card_ids
+        ));
+
         // Take action (score/recruit)
         if ($side == DILEMMA_LEFT) {
             // Draw two recruits and keep one
             $this->cards->pickCards(2, DECK_RECRUIT, $player_id);
             //TODO: choose one
+            $next_state = TX_DRAFT;
         } else {
             // Place star on card (score)
             $this->addStar($player_id, $dilemma_id);
-            //TODO: notify
+            $next_state = TX_NEXT;
         }
+
+        $this->gamestate->nextState($next_state);
     }
 
     function actTradeOffer($trade, $other_player)
@@ -1077,7 +1123,13 @@ class euphoria extends Table
         $sql .= " VALUES (${trade_id}, ${player_id}, ${other_player}, '${data}')";
         self::DbQuery($sql);
 
-        //TODO: notify
+        $msg = clienttranslate('${player_name} offers ${trade_items} to ${player_name2}');
+        self::notifyAllPlayers('tradeOffer', $msg, array(
+            'player_name' => self::getActivePlayerName(),
+            'player_name2' => self:;getPlayerNameById($other_player),
+            'trade_items' => $trade
+        ));
+
         $this->gamestate->nextState(TX_TRADE);
     }
 
@@ -1101,7 +1153,12 @@ class euphoria extends Table
         $sql = "UPDATE trade SET trade_return = '${data}' WHERE trade_id = ${trade_id}";
         self::DbQuery($sql);
 
-        //TODO: notify
+        $msg = clienttranslate('${player_name} accepts and offers in return ${trade_items}');
+        self::notifyAllPlayers('tradeAccept', $msg, array(
+            'player_name' => self::getActivePlayerName(),
+            'trade_items' => $trade
+        ));
+
         $this->gamestate->nextState(TX_TRADE);
     }
 
@@ -1120,11 +1177,18 @@ class euphoria extends Table
         // Perform trade
         $player_one = $row['player_one'];
         $player_two = $row['player_two'];
-        $data = json_decode($row['trade_offer']);
-        $this->doTrade($player_one, $player_two, $data);
-        $data = json_decode($row['trade_return']);
-        $this->doTrade($player_two, $player_one, $data);
-        //TODO: notify
+        $trade_one = json_decode($row['trade_offer']);
+        $this->doTrade($player_one, $player_two, $trade_one);
+        $trade_two = json_decode($row['trade_return']);
+        $this->doTrade($player_two, $player_one, $trade_two);
+
+        $msg = clienttranslate('${player_name} and ${player_name2} agree to trade');
+        self::notifyAllPlayers('tradeConfirm', $msg, array(
+            'player_name' => self::getActivePlayerName(),
+            'player_name2' => self:getPlayerNameById($player_two),
+            'trade_12' => $trade_one,
+            'trade_21' => $trade_two,
+        ));
 
         // Current player's turn still
         $this->gamestate->nextState();
@@ -1142,15 +1206,34 @@ class euphoria extends Table
             throw new feException("Impossible trade: cannot cancel trade '${trade_id}'")
         }
 
-        //TODO: notify
+        $msg = clienttranslate('${player_name} cancels the trade');
+        self::notifyAllPlayers('log', $msg, array(
+            'player_name' => self::getActivePlayerName()
+        ));
+
         $this->gamestate->nextState(TX_CANCEL);
     }
 
     function actPass()
     {
         self::checkAction('actPass'); 
-        //TODO: why/how pass? if only for using double then need to reset doubles here:
-        //self::DbQuery("UPDATE worker SET double_turn = 0");
+
+        // Player has doubles but chooses not to use them (TODO: is there anything else?)
+        // Verify this is true
+        $sql = "SELECT count(1) FROM worker WHERE double_turn = 1";
+        $val = (int)self::getUniqueValueFromDb($sql);
+        if ($val == 0) {
+            throw new BgaUserException(self::_("You cannot pass and must take an action"));
+        }
+
+        // Reset doubles
+        self::DbQuery("UPDATE worker SET double_turn = 0");
+
+        $msg = clienttranslate('${player_name} passes');
+        self::notifyAllPlayers('log', $msg, array(
+            'player_name' => self::getActivePlayerName()
+        ));
+
         $this->gamestate->nextState(TX_NEXT);
     }
 
@@ -1172,32 +1255,6 @@ class euphoria extends Table
         // TODO: how confirm benefit?
         // 1. gain resources
     }
-
-    /*
-    
-    Example:
-
-    function playCard( $card_id )
-    {
-        // Check that this is the player's turn and that it is a "possible action" at this game state (see states.inc.php)
-        self::checkAction( 'playCard' ); 
-        
-        $player_id = self::getActivePlayerId();
-        
-        // Add your game logic to play a card there 
-        ...
-        
-        // Notify all players about the card played
-        self::notifyAllPlayers( "cardPlayed", clienttranslate( '${player_name} plays ${card_name}' ), array(
-            'player_id' => $player_id,
-            'player_name' => self::getActivePlayerName(),
-            'card_name' => $card_name,
-            'card_id' => $card_id
-        ) );
-          
-    }
-    
-    */
 
     
 //////////////////////////////////////////////////////////////////////////////
@@ -1264,6 +1321,7 @@ class euphoria extends Table
 
     function stNextPlayer()
     {
+        //TODO: check doubles
         //TODO: check end game
     }
 
@@ -1305,7 +1363,6 @@ class euphoria extends Table
                 $val = $this->activateWorker($worker_id);
             }
             $this->knowledgeCheck($player_id);
-            //TODO: notify
 
             //TODO: activate if needed
             //XXX THIS IS GOING TO BE MORE COMPLICATED THAN CURRENTLY SUPPORTED, ISN'T IT???
@@ -1348,6 +1405,10 @@ class euphoria extends Table
             // Player lost resources and can no longer pay clost
             // Worker is placed but no benefits gained; skip everything else
             // https://boardgamegeek.com/thread/1994424/timing-bumping-and-market-penalties
+            $msg = clienttranslate('${player_name} cannot pay an receives no benefit');
+            self::notifyAllPlayers('log', $msg, array(
+                'player_name' => self::getActivePlayerName()
+            ));
             $this->gamestate->nextState(TX_NEXT);
             return;
         }
@@ -1361,10 +1422,9 @@ class euphoria extends Table
             } else if (in_array($type, RESOURCES) || in_array($type, COMMODITIES)) {
                 $this->incResource($player_id, $type, -$nbr);
             }
-            //TODO: notify
         }
 
-        // Gain benefit
+        // Determine benefit
         if (in_array($loc_id, COMMODITIY_AREAS)) {
             // Commodity benefit depends on total knowledge of workers at location
             $sql = "SELECT SUM(worker_val) FROM worker WHERE worker_loc = ${loc_id}";
@@ -1376,21 +1436,27 @@ class euphoria extends Table
             } else {
                 $idx = 2;
             }
-            $this->gainBenefits($player_id, $loc_benefit[$idx], $loc_id, $loc_region);
+            $loc_benefit = $loc_benefit[$idx];
             //TODO: aleg benefit
-        } else if (in_array($loc_id, TUNNELS)) {
-            if ($this->hasLocationBenefit($loc_id, $player_id)) {//TODO
-                $this->gainBenefits($player_id, $loc_benefit, $loc_id, $loc_region);
-            } else {
+        } else if (in_array($loc_id, TUNNELS) &&
+                   !$this->hasLocationBenefit($loc_id, $player_id)) {//TODO
                 // player must choose...how?
                 //TODO; separate action
                 //OR force it to come in with move, yes? Easy, but many Recruits will require choice...
             }
-        } else if ($loc_benefit !== null) {
+        }
+
+        // Gain benefit
+        if ($loc_benefit !== null) {
             $this->gainBenefits($player_id, $loc_benefit, $loc_id, $loc_region);
         }
-        //TODO: notify
 
+        $msg = clienttranslate('${player_name} pays ${payment} and gains ${benefit}');
+        self::notifyAllPlayers('placeBenefits', $msg, array(
+            'player_name' => self::getActivePlayerName(),
+            'payment' => $payment,
+            'benefit' => $loc_benefit
+        ));
 
         // Possible additional actions
         if (in_array($loc_id, TUNNELS)) {
@@ -1398,11 +1464,8 @@ class euphoria extends Table
         } else if (in_array($loc_id, CON_SITES)) {
             $this->gamestate->nextState(TX_MARKET);
         } else {
-            //TODO: active player?
-            // 7. doubles? TODO
             $this->gamestate->nextState(TX_NEXT);
         }
-
     }
 
     function stMine()
@@ -1471,7 +1534,6 @@ class euphoria extends Table
             // Place one star on market for each player
             foreach (array_unique($players) as $idx => $player_id) {
                 $this->addStar($player_id, $market);
-                //TODO: notify
             }
 
             // Handle bumps in next state

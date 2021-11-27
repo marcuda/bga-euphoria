@@ -31,6 +31,7 @@ define("ST_NEXT", 90);
 define("ST_END", 99);
 
 define("TX_BUMP", "tx_bump");
+define("TX_DRAFT", "tx_draft");
 define("TX_DILEMMA", "tx_dilemma");
 define("TX_MARKET", "tx_market");
 define("TX_MINE", "tx_mine");

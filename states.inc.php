@@ -68,7 +68,7 @@ $machinestates = array(
         "type" => "multipleactiveplayer",
         "action" => "stDraftRecruits",
         "args" => "argsDraftRecruits",
-        "possibleactions" => array("actDraftRecruits"),
+        "possibleactions" => array("actDraftRecruits", "actDilemmaRecruit"),
         "transitions" => array("" => ST_NEXT)
     ),
 
@@ -158,7 +158,7 @@ $machinestates = array(
         "args" => "argsPlay",
         "possibleactions" => array("actPlace", "actRetrieve", "actDilemma", "actGainRecruit",
                                    "actTradeOffer", "actPass", "actPenalty", "actBenefit"),
-        "transitions" => array("" => ST_NEXT)
+        "transitions" => array(TX_DRAFT => ST_DRAFT_RECRUITS, TX_NEXT => ST_NEXT)
     ),
 
     ST_TRADE => array(
