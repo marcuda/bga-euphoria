@@ -33,6 +33,7 @@ define("ST_END", 99);
 define("TX_BUMP", "tx_bump");
 define("TX_DRAFT", "tx_draft");
 define("TX_DILEMMA", "tx_dilemma");
+define("TX_END", "tx_end");
 define("TX_MARKET", "tx_market");
 define("TX_MINE", "tx_mine");
 define("TX_NEXT", "tx_next");
@@ -50,7 +51,8 @@ define("GSV_TRADE", "gsv_trade_counter");
 define("GSV_ST_PLAYER", "gsv_st_player");
 define("GSV_ST_LOC", "gsv_st_loc");
 define("GSV_PREV_ST", "gsv_prev_state");
-define("GSV_HAS_DOUBLES", "gsv_doubles");
+define("GSV_DOUBLES_VAL", "gsv_doubles_val");
+define("GSV_DOUBLES_TURN", "gsv_doubles_turn");
 
 // Game options
 define("OPT_MARKET_STARS", 100);

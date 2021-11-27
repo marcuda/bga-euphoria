@@ -68,7 +68,8 @@ class euphoria extends Table
             GSV_ST_PLAYER => 35,
             GSV_ST_LOC => 36,
             GSV_PREV_ST => 37,
-            GSV_HAS_DOUBLES => 38,
+            GSV_DOUBLES_VAL => 38,
+            GSV_DOUBLES_TURN => 39,
 
             'LAST_GLOBAL' => 89,
             //      ...
@@ -901,21 +902,23 @@ class euphoria extends Table
         //TODO: verify penalties
 
         // Check if player has, and is using, doubles
-        // TODO: store this info on player turn start
         $sql = "SELECT double_turn FROM worker WHERE worker_id = ${worker_id}";
-        $val = self::getUniqueValueFromDB($sql);
-        if ((int)$val != 0) {
+        $val = (int)self::getUniqueValueFromDB($sql);
+        if ($val != 0) {
+            self::setGameStateValue(GSV_DOUBLES_VAL, $val);
             // Check if any other dups remain
-            $sql = "SELECT count(1) FROM worker WHERE double_turn != 0 ";
+            $sql = "SELECT count(1) FROM worker WHERE double_turn = ${val} ";
             $sql .= " AND worker_id != ${worker_id} AND player_id = ${player_id}";
             $cnt = self::getUniqueValueFromDB($sql);
             if ((int)$cnt > 0) {
                 // Yes, player gets another turn
-                self::setGameStateLabel('keep_player', 1);
+                self::setGameStateValue(GSV_DOUBLES_TURN, 1);
             }
 
             // Mark worker as used
             self::DbQuery("UPDATE worker SET double_turn = 0 WHERE worker_id = ${worker_id}");
+        } else {
+            self::setGameStateValue(GSV_DOUBLES_VAL, 0);
         }
 
         // Move is valid, continue
@@ -958,6 +961,11 @@ class euphoria extends Table
     {
         self::checkAction('actRetrieve'); 
         $player_id = self::getActivePlayerId();
+
+        // Verify player isn't taking bonus turn
+        if (self::getGameStateValue(GSV_DOUBLES_VAL) != 0) {
+            throw new BgaUserException(self::_("You must place a doubles worker or pass"));
+        }
 
         // Verify worker(s)
         if (count($worker_ids) == 0) {
@@ -1042,6 +1050,11 @@ class euphoria extends Table
     {
         self::checkAction('actDilemma'); 
         $player_id = self::getActivePlayerId();
+
+        // Verify player isn't taking bonus turn
+        if (self::getGameStateValue(GSV_DOUBLES_VAL) != 0) {
+            throw new BgaUserException(self::_("You must place a doubles worker or pass"));
+        }
 
         // Verify dilemma card
         if (!$this->verifyCard($dilemma_id, DILEMMA, CARD_HIDDEN, $player_id)) {
@@ -1226,9 +1239,7 @@ class euphoria extends Table
 
         // Player has doubles but chooses not to use them (TODO: is there anything else?)
         // Verify this is true
-        $sql = "SELECT count(1) FROM worker WHERE double_turn = 1";
-        $val = (int)self::getUniqueValueFromDb($sql);
-        if ($val == 0) {
+        if (self::getGameStateValue(GSV_DOUBLES_VAL) == 0) {
             throw new BgaUserException(self::_("You cannot pass and must take an action"));
         }
 
@@ -1290,45 +1301,89 @@ class euphoria extends Table
     }    
     */
 
+    function argPlayerTurn()
+    {
+        $player_id = self::getActivePlayerId();
+
+        $doubles = self::getGameStateValue(GSV_DOBULES_VAL);
+        if ($doubles != 0) {
+            // Player placed a worker with doubles and can take an extra turn
+            // but ONLY to place another double
+            $sql = "SELECT worker_id FROM worker WHERE double_turn = ${doubles}";
+            $sql .= " AND player_id = ${player_id}";
+            $worker_ids = self::getObjectListFromDB($sql, true);
+
+            $possible_moves = array(
+                'workers' => $worker_ids,
+                'retrieve' => false,
+                'dilemma' => false,
+                'locs' => $this->getPossibleMoves() //TODO
+            );
+        }
+
+        // Does player have any workers on the board?
+        $sql = "SELECT count(1) FROM worker WHERE player_id = ${player_id} AND ";
+        $sql .= " worker_loc != ". ACTIVE ." AND worker_loc != ". INACTIVE;
+        $can_retrieve = (int)self::getUniqueValueFromDB($sql) > 0;
+
+        // Does player have the card(s) needed for dilemma?
+        //TODO: check dilemma and cards in hand
+
+        //TODO: retrive? dilemma?
+        //TODO: private info revealed for some locations?
+        return array('locs' => $this->getPossibleMoves());
+    }
+
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// Game state actions
 ////////////
 
-    /*
-        Here, you can create methods defined as "game state actions" (see "action" property in states.inc.php).
-        The action method of state X is called everytime the current game state is set to X.
-    */
-    
-    /*
-    
-    Example for game state "MyGameState":
-
-    function stMyGameState()
-    {
-        // Do some stuff ...
-        
-        // (very often) go to another gamestate
-        $this->gamestate->nextState( 'some_gamestate_transition' );
-    }    
-    */
-
     function stDraftRecruits()
-    {
-    }
-
-    function stPlay()
-    {
-    }
-
-    function stTrade()
     {
     }
 
     function stNextPlayer()
     {
-        //TODO: check doubles
-        //TODO: check end game
+        // Check end game
+        $score = self::getUniqueValueFromDB("SELECT MAX(player_score) FROM player");
+        if ((int)$score >= 10) {
+            // Game is over!
+            $this->computeTieBreakers(); //TODO
+            $this->gamestate->nextState(TX_END);
+            return;
+        }
+
+        // Check if player has extra turn from doubles
+        if (self::getGameStateValue(GSV_DOUBLES_TURN) == 1) {
+            self::setGameStateValue(GSV_DOUBLES_TURN, 0);
+            $this->gamestate->nextState(TX_NEXT);
+            return
+        }
+
+        // Next player
+        $player_id = self::activeNextPlayer();
+
+        // Note any doubles at start of turn
+        // First clear any previously set
+        self::DbQuery("UPDATE worker SET double_turn = 0");
+        // Get all active workers
+        $sql = "SELECT worker_id, worker_val FROM worker WHERE ";
+        $sql .= "worker_loc = ". ACTIVE ." AND player_id = ${player_id}";
+        $workers = self::getCollectionFromDB($sql);
+        // Count values
+        $dups = array_count_values($workers);
+        foreach ($dups as $val => $cnt) {
+            if ($cnt > 1) {
+                $sql = "UPDATE worker SET double_turn = ${val} WHERE ";
+                $sql .= "worker_loc = ". ACTIVE ." AND player_id = ${player_id}";
+                $sql .= " AND worker_val = ${val}";
+                self::DbQuery($sql);
+            }
+        }
+
+        $this->gamestate->nextState(TX_NEXT);
+        //TODO: transition to trade???
     }
 
     function stBump()
