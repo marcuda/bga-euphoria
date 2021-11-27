@@ -446,6 +446,12 @@ class euphoria extends Table
         }
     }
 
+    function getMarket($market_loc)
+    {
+        $cards = $this->cards->getCardsInLocation('board', $market_loc)
+        $card = array_pop($cards);
+        //TODO: get market object from card id/type
+    }
     function getRecruitInfo($card_id)
     {
         //TODO: from cardId get card then match to specific recruit object
@@ -1475,16 +1481,23 @@ class euphoria extends Table
         $loc_region = $location['region'];
 
         $val = self::incGameStateValue(GSV_MINER_POS . $loc_region, 1);
+        if ($val < 9) {
+            $msg = clienttranslate('${region} miner moves foward');
+        } else if ($val == 9) {
+            // Open tunnel action
+            self::incGameStateValue(GSV_TUNNEL_OPEN . $loc_region, 1);
+            $msg = clienttranslate('${region} miner completes the tunnel and opens a bonus action');
+        }
+        self::notifyAllPlayers('miner', $msg, array(
+            'i18n' => array('region'),
+            'region' => REGIONS[$loc_region],
+            'bonus'=> $val == 9
+        ));
+
         if ($val == 6) {
             $this->activateRecruits($loc_region);
         }
-        if ($val == 9) {
-            self::incGameStateValue(GSV_TUNNEL_OPEN . $loc_region, 1);
-            //TODO: notify miner move, tunnel open
-        }
-        if ($val < 9) {
-            //TODO: notify miner move
-        }
+
         $this->gamestate->nextState();
     }
 
@@ -1492,17 +1505,18 @@ class euphoria extends Table
     {
         $next_state = TX_NEXT;
         $loc_id = self::getGameStateValue(GSV_ST_LOC);
-        $location = LOCATIONS[$loc_id];
 
         if (!in_array($loc_id, CON_SITES)) {
             throw new feException("Impossible market state: invalid location '${loc_id}'");
         }
 
+        $location = LOCATIONS[$loc_id];
+        $market_loc = $location['market']
+
         // Determine how many construction sites are filled
-        $market = $location['market']
         $workers = array();
         $players = array();
-        foreach (CONS_BY_MARKET[$market] as $idx => $loc) {
+        foreach (CONS_BY_MARKET[$market_loc] as $idx => $loc) {
             $sql = "SELECT worker_id wid, player_id pid FROM worker WHERE worker_loc = ${loc}";
             $worker = self::getObjectFromDB($sql);
             if ($worker !== null) {
@@ -1528,12 +1542,34 @@ class euphoria extends Table
             }
 
             // Flip market
-            self::incGameStateValue(GSV_MARKET_BUILT . $market, 1);
-            //TODO: notify
+            self::incGameStateValue(GSV_MARKET_BUILT . $market_loc, 1);
+
+            // Get list of players that contributed for notif
+            $market = $this->getMarket($market_loc);
+            $active_player = self::getActivePlayerId();
+            $log = '${player_name}';
+            $args = array('player_name' => self::getActivePlayerName());
+            $i = 2;
+            foreach (array_unique($players) as $idx => $player_id) {
+                if ($player_id != $active_player) {
+                    $log .= ', ${player_name' . $i . '}';
+                    $args['player_name' . $i] = self::getPlayerNameById($player_id);
+                    $i += 1;
+                }
+            }
+
+            $msg = clienttranslate('${players} construct the ${name}');
+            self::notifyAllPlayers('buildMarket', $msg, array(
+                'i18n' => array('name'),
+                'name' => $market['name'],
+                'loc' => $market_loc,
+                'players' => array('log' => $log, 'args' => $args)
+                //TODO: verify this works (i18n, all players highlighted in log)
+            ));
 
             // Place one star on market for each player
             foreach (array_unique($players) as $idx => $player_id) {
-                $this->addStar($player_id, $market);
+                $this->addStar($player_id, $market_loc);
             }
 
             // Handle bumps in next state
