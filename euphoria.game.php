@@ -141,7 +141,6 @@ class euphoria extends Table
                 'nbr' => 6
             );
         }
-        /*
         foreach (RECRUITS as $idx => $card) {
             $cards[] = array(
                 'type' = RECRUIT,
@@ -156,7 +155,6 @@ class euphoria extends Table
                 'nbr' => 1
             );
         }
-         */
         for ($i=0; $i<count(ARTIFACTS); $i++) {
             $cards[] array(
                 'type' = DILEMMA,
@@ -185,7 +183,7 @@ class euphoria extends Table
         $cards = $this->cards->getCardsOfType(MARKET);
         $this->cards->moveCards(array_column($cards, 'id'), DECK_MARKET);
         $this->cards->shuffle(DECK_MARKET);
-        foreach (MARKETS as $market) {
+        foreach (MARKET_SITES as $market) {
             $this->cards->pickCardForLocation(DECK_MARKET, 'board', $market);
         }
 
@@ -447,15 +445,18 @@ class euphoria extends Table
         }
     }
 
-    function getMarket($market_loc)
+    function getMarketInfo($market_loc)
     {
         $cards = $this->cards->getCardsInLocation('board', $market_loc)
         $card = array_pop($cards);
-        //TODO: get market object from card id/type
+        return MARKETS[$card['type_arg']];
     }
+
+
     function getRecruitInfo($card_id)
     {
-        //TODO: from cardId get card then match to specific recruit object
+        $card = $this->cards->getCard($card_id);
+        return RECRUITS[$card['type_arg']];
     }
 
     /*
@@ -473,7 +474,7 @@ class euphoria extends Table
         $msg = clienttranslate('All recruits from ${region} are activated');
         self::notifyAllPlayers('log', $msg, array(
             'i18n' => array('region'),
-            'region' => REGIONS[$region]
+            'region' => REGION_I18N[$region]
         ));
 
         // Check all hidden recruits for region
@@ -565,7 +566,7 @@ class euphoria extends Table
             } else if ($type == STAR) {
                 //TODO player must choose loc (except icarus)
                 $territory = TERRITORIES[$region];
-                if ($region == ICARUS || (in_array($location, MARKETS) &&
+                if ($region == ICARUS || (in_array($location, MARKET_SITES) &&
                         $this->gamestate->table_globals[OPT_MARKET_STARS] == 0)) {
                     // Territory is only option
                     if ($this->isSpaceOpen($territory)) {
@@ -627,7 +628,7 @@ class euphoria extends Table
             $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = ${location}";
             $nbr_filled = self::getUniqueValueFromDb($sql);
             $open = $nbr_filled < self::getPlayersNumber();
-        } else if (in_array($location, MARKETS)) {
+        } else if (in_array($location, MARKET_SITES)) {
             // Market built?
             $open = self::getGameStateValue(GSV_MARKET_BUILT . $location) != 0;
         } else if (in_array($location, TUNNELS_ENDS)) {
@@ -653,7 +654,7 @@ class euphoria extends Table
 
         if ($nbr !== null) {
             // Already has some, add another
-            if (in_array($loc, MARKETS) || is_numeric($loc)) {
+            if (in_array($loc, MARKET_SITES) || is_numeric($loc)) {
                 // Only one star per market or card (recruit/dilemma)
                 throw new feException("Impossible score: player '${player_id}' already has a star at '${loc}'");
             }
@@ -1545,7 +1546,7 @@ class euphoria extends Table
         }
         self::notifyAllPlayers('miner', $msg, array(
             'i18n' => array('region'),
-            'region' => REGIONS[$loc_region],
+            'region' => REGION_I18N[$loc_region],
             'bonus'=> $val == 9
         ));
 
@@ -1600,7 +1601,7 @@ class euphoria extends Table
             self::incGameStateValue(GSV_MARKET_BUILT . $market_loc, 1);
 
             // Get list of players that contributed for notif
-            $market = $this->getMarket($market_loc);
+            $market = $this->getMarketInfo($market_loc);
             $active_player = self::getActivePlayerId();
             $log = '${player_name}';
             $args = array('player_name' => self::getActivePlayerName());
