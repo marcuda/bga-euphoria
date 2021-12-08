@@ -155,10 +155,10 @@ class euphoria extends Table
                 'nbr' => 1
             );
         }
-        for ($i=0; $i<count(ARTIFACTS); $i++) {
+        for (DILEMMAS as $idx => $card) {
             $cards[] array(
                 'type' = DILEMMA,
-                'type_arg' = $i,
+                'type_arg' = $idx,
                 'nbr' => 1
             );
         }

@@ -229,3 +229,4 @@ define("TUNNEL_ENDS", array(EUPHORIA_TUNNEL_END, WASTELANDS_TUNNEL_END, SUBTERRA
 require_once 'modules/php/locations.inc.php';
 require_once 'modules/php/markets.inc.php';
 require_once 'modules/php/recruits.inc.php';
+require_once 'modules/php/dilemmas.inc.php';
