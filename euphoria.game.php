@@ -255,11 +255,12 @@ class euphoria extends Table
         $result['players'] = self::getCollectionFromDb($sql);
         foreach ($result['players'] as $player_id => $player) {
             $player['cards'] = count($this->cards->getPlayerHand($player_id));
-            $player['recruits'] = $this->getCardsOfTypeInLocation(RECRUIT, null, "board", $player_id);
+            $player['recruits'] = $this->getCardsOfTypeInLocation(RECRUIT, null, "board", $player_id); //TODO: board or INPLAY?
         }
         $result['resources'] = self::getCollectionFromDb("SELECT * FROM resource");
         $result['workers'] = self::getCollectionFromDb("SELECT * FROM worker");
         $result['hand'] = $this->cards->getPlayerHand($current_player_id);
+        //TODO: hidden cards, cards in play (all)
 
         //XXX debug
         $result['globals'] = array_combine(array_keys($this->GAMESTATELABELS), array_map('self::getGameStateValue', array_keys($this->GAMESTATELABELS)));
@@ -359,8 +360,8 @@ class euphoria extends Table
 
         if ($val >= 16) {
             // Lose 1 worker
-            $sql = "SELECT worker_id FROM worker WHERE player_id = ${player_id}";
-            $sql .= " ORDER BY worker_val DESC LIMIT 1";
+            $sql = "SELECT worker_id FROM worker WHERE worker_loc = ". ACTIVE;
+            $sql .= " AND player_id = ${player_id} ORDER BY worker_val DESC LIMIT 1";
             $worker_id = self::getUniqueValuefromDb($sql);
 
             $this->moveWorker($worker_id, INACTIVE);
@@ -624,7 +625,7 @@ class euphoria extends Table
     function isSpaceOpen($location, $region=null)
     {
         if (in_array($location, TERRITORIES)) {
-            // Territory - check stars again playes
+            // Territory - check stars against players
             $sql = "SELECT SUM(resource_count) FROM resource WHERE resource_loc = ${location}";
             $nbr_filled = self::getUniqueValueFromDb($sql);
             $open = $nbr_filled < self::getPlayersNumber();
@@ -1102,7 +1103,7 @@ class euphoria extends Table
             'i18n' => array('action'),
             'player_id' => $player_id,
             'player_name' => self::getActivePlayerName(),
-            'action' => $this->getDilemmaInfo()[$side], //TODO
+            'action' => $this->getDilemmaInfo()[$side],
             'dilemma_id' => $dilemma_id,
             'card_ids' => $card_ids
         ));
@@ -1314,7 +1315,7 @@ class euphoria extends Table
             $sql .= " AND player_id = ${player_id}";
             $worker_ids = self::getObjectListFromDB($sql, true);
 
-            $possible_moves = array(
+            return array(
                 'workers' => $worker_ids,
                 'retrieve' => false,
                 'dilemma' => false,
@@ -1327,12 +1328,21 @@ class euphoria extends Table
         $sql .= " worker_loc != ". ACTIVE ." AND worker_loc != ". INACTIVE;
         $can_retrieve = (int)self::getUniqueValueFromDB($sql) > 0;
 
-        // Does player have the card(s) needed for dilemma?
-        //TODO: check dilemma and cards in hand
+        // Available workers to place
+        $sql = "SELECT worker_id FROM worker WHERE worker_loc = ". ACTIVE;
+        $sql .= " AND player_id = ${player_id}";
+        $worker_ids = self::getObjectListFromDB($sql, true);
 
-        //TODO: retrive? dilemma?
+        // Does player have their dilemma still?
+        $dilemma = $this->getCardsOfTypeInLocation(DILEMMA, null, CARD_HIDDEN, $player_id);
+
         //TODO: private info revealed for some locations?
-        return array('locs' => $this->getPossibleMoves());
+        return array(
+            'workers' => $worker_ids,
+            'retrieve' => $can_retrieve,
+            'dilemma' => count($dilemma) > 0,
+            'locs' => $this->getPossibleMoves() //TODO
+        );
     }
 
 
